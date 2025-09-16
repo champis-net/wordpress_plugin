@@ -1,23 +1,28 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, forwardRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Button, Typography, Dialog, DialogContent, DialogTitle, IconButton,
-    TablePagination
+    Paper, Button, Typography, Dialog, DialogContent, DialogTitle,
+    IconButton, TablePagination, Slide
 } from "@mui/material";
 import ImageIcon from "@mui/icons-material/Image";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
+// Transition Slide up
+const Transition = forwardRef(function Transition(props, ref) {
+    return <Slide direction="up" ref={ref} {...props} />;
+});
+
 function Exhibition({ exhibitionId }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // état pagination
+    // pagination
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // état modale
+    // modale
     const [open, setOpen] = useState(false);
     const [currentImages, setCurrentImages] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -75,7 +80,7 @@ function Exhibition({ exhibitionId }) {
         );
     };
 
-    // gestion pagination
+    // pagination
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
     };
@@ -94,9 +99,9 @@ function Exhibition({ exhibitionId }) {
                     <TableContainer
                         component={Paper}
                         sx={{
-                            backgroundColor: 'transparent', // fond transparent
-                            boxShadow: 'none',              // supprime l’ombre
-                            color: 'inherit',               // hérite de la couleur du texte du thème
+                            backgroundColor: 'transparent',
+                            boxShadow: 'none',
+                            color: 'inherit',
                         }}
                     >
                         <Table>
@@ -134,7 +139,6 @@ function Exhibition({ exhibitionId }) {
                         </Table>
                     </TableContainer>
 
-                    {/* Pagination */}
                     <TablePagination
                         rowsPerPageOptions={[10, 20, 50]}
                         component="div"
@@ -144,9 +148,23 @@ function Exhibition({ exhibitionId }) {
                         onPageChange={handleChangePage}
                         onRowsPerPageChange={handleChangeRowsPerPage}
                         labelRowsPerPage="Espèces par page :"
+                        sx={{
+                            color: "inherit",                // 🔑 texte hérite WP
+                            "& .MuiSvgIcon-root": {
+                                color: "inherit",            // 🔑 flèches suivent aussi
+                            },
+                            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
+                                color: "inherit",            // 🔑 labels héritent
+                            },
+                            "& .MuiInputBase-root": {
+                                color: "inherit",            // 🔑 dropdown texte hérite
+                            },
+                            "& .MuiSelect-icon": {
+                                color: "inherit",            // 🔑 icône du select hérite
+                            },
+                        }}
                     />
 
-                    {/* Bouton téléchargement Excel */}
                     <Button
                         variant="contained"
                         color="primary"
@@ -157,12 +175,37 @@ function Exhibition({ exhibitionId }) {
                     </Button>
 
                     {/* Fenêtre modale images */}
-                    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+                    <Dialog
+                        open={open}
+                        onClose={handleClose}
+                        fullScreen
+                        TransitionComponent={Transition}
+                        TransitionProps={{ timeout: 500 }}
+                        BackdropProps={{
+                            sx: {
+                                backdropFilter: 'blur(8px)',
+                                backgroundColor: 'rgba(0,0,0,0.4)',
+                            },
+                        }}
+                        PaperProps={{
+                            sx: {
+                                backgroundColor: 'transparent',
+                                boxShadow: 'none',
+                                color: '#fff',
+                            },
+                        }}
+                    >
                         {currentImages.length > 0 && (
                             <>
-                                <DialogTitle sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    Images ({currentIndex + 1}/{currentImages.length})
-                                    <IconButton onClick={handleClose}>✖</IconButton>
+                                <DialogTitle
+                                    sx={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        color: '#fff',
+                                    }}
+                                >
+                                    {currentIndex + 1}/{currentImages.length}
+                                    <IconButton onClick={handleClose} sx={{ color: '#fff' }}>✖</IconButton>
                                 </DialogTitle>
                                 <DialogContent
                                     sx={{
@@ -183,14 +226,14 @@ function Exhibition({ exhibitionId }) {
                                         }}
                                     />
                                     {currentImages[currentIndex].comment && (
-                                        <Typography variant="body2" sx={{ mt: 2 }}>
+                                        <Typography variant="body2" sx={{ mt: 2, color: '#fff' }}>
                                             {currentImages[currentIndex].comment}
                                         </Typography>
                                     )}
                                     {currentImages.length > 1 && (
                                         <div style={{ marginTop: "10px", display: "flex", gap: "1rem" }}>
-                                            <Button onClick={prevImage}>Précédent</Button>
-                                            <Button onClick={nextImage}>Suivant</Button>
+                                            <Button onClick={prevImage} variant="contained">Précédent</Button>
+                                            <Button onClick={nextImage} variant="contained">Suivant</Button>
                                         </div>
                                     )}
                                 </DialogContent>
