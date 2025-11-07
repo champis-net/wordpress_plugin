@@ -27,6 +27,9 @@ function Exhibition({ exhibitionId }) {
     const [currentImages, setCurrentImages] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
+    // recherche
+    const [searchTerm, setSearchTerm] = useState("");
+
     useEffect(() => {
         fetch(`https://intranet.champis.net/api/v1/exhibition/${exhibitionId}`)
             .then(res => res.json())
@@ -57,6 +60,16 @@ function Exhibition({ exhibitionId }) {
     };
 
     const speciesList = data.exhibition_species ?? [];
+
+    // Filtrage par nom scientifique ou ID
+    const filteredSpecies = speciesList.filter(species => {
+        const term = searchTerm.toLowerCase().trim();
+        if (!term) return true;
+        return (
+            species.canonical_name?.toLowerCase().includes(term) ||
+            species.no?.toString().includes(term)
+        );
+    });
 
     const handleOpen = (images) => {
         setCurrentImages(images);
@@ -94,7 +107,25 @@ function Exhibition({ exhibitionId }) {
         <div className="exhibition">
             <Typography variant="h5" gutterBottom>{data.description}</Typography>
 
-            {speciesList.length > 0 ? (
+            {/* Champ de recherche */}
+            <div style={{ marginBottom: "1rem" }}>
+                <input
+                    type="text"
+                    placeholder="Chercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                        padding: "8px 12px",
+                        width: "100%",
+                        maxWidth: "400px",
+                        borderRadius: "8px",
+                        border: "1px solid #ccc",
+                        fontSize: "1rem",
+                    }}
+                />
+            </div>
+
+            {filteredSpecies.length > 0 ? (
                 <>
                     <TableContainer
                         component={Paper}
@@ -113,16 +144,19 @@ function Exhibition({ exhibitionId }) {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {speciesList
+                                {filteredSpecies
                                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                     .map(species => (
                                         <TableRow key={species.uid}>
                                             <TableCell sx={{ color: 'inherit', borderBottom: '1px solid currentColor' }}>
+                                                {species.no ?? ""}{" "}
                                                 <a href={`https://www.gbif.org/species/${species.id}`}>
                                                     <i>{species.canonical_name}</i>
                                                 </a> {species.author}
                                             </TableCell>
-                                            <TableCell sx={{ color: 'inherit', borderBottom: '1px solid currentColor' }}>{species.vernacular_name ?? ""}</TableCell>
+                                            <TableCell sx={{ color: 'inherit', borderBottom: '1px solid currentColor' }}>
+                                                {species.vernacular_name ?? ""}
+                                            </TableCell>
                                             <TableCell sx={{ color: 'inherit', borderBottom: '1px solid currentColor' }}>
                                                 {species.images.length > 0 && (
                                                     <IconButton
@@ -142,26 +176,20 @@ function Exhibition({ exhibitionId }) {
                     <TablePagination
                         rowsPerPageOptions={[10, 20, 50]}
                         component="div"
-                        count={speciesList.length}
+                        count={filteredSpecies.length}
                         rowsPerPage={rowsPerPage}
                         page={page}
                         onPageChange={handleChangePage}
                         onRowsPerPageChange={handleChangeRowsPerPage}
                         labelRowsPerPage="Espèces par page :"
                         sx={{
-                            color: "inherit",                // 🔑 texte hérite WP
-                            "& .MuiSvgIcon-root": {
-                                color: "inherit",            // 🔑 flèches suivent aussi
-                            },
+                            color: "inherit",
+                            "& .MuiSvgIcon-root": { color: "inherit" },
                             "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
-                                color: "inherit",            // 🔑 labels héritent
+                                color: "inherit",
                             },
-                            "& .MuiInputBase-root": {
-                                color: "inherit",            // 🔑 dropdown texte hérite
-                            },
-                            "& .MuiSelect-icon": {
-                                color: "inherit",            // 🔑 icône du select hérite
-                            },
+                            "& .MuiInputBase-root": { color: "inherit" },
+                            "& .MuiSelect-icon": { color: "inherit" },
                         }}
                     />
 
