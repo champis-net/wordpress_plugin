@@ -236,6 +236,7 @@ function Exhibition({ exhibitionId }) {
                                     <IconButton onClick={handleClose} sx={{ color: '#fff' }}>✖</IconButton>
                                 </DialogTitle>
                                 <DialogContent
+                                    onClick={handleClose}
                                     sx={{
                                         display: "flex",
                                         flexDirection: "column",
@@ -252,17 +253,53 @@ function Exhibition({ exhibitionId }) {
                                             objectFit: "contain",
                                             borderRadius: "8px",
                                         }}
+                                        onClick={(e) => e.stopPropagation()}
                                     />
+                                    {/* Flèche gauche */}
+                                    {currentImages.length > 1 && (
+                                        <IconButton
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                prevImage();
+                                            }}
+                                            sx={{
+                                                position: "absolute",
+                                                left: 20,
+                                                top: "50%",
+                                                transform: "translateY(-50%)",
+                                                backgroundColor: "rgba(0,0,0,0.4)",
+                                                color: "#fff",
+                                                "&:hover": { backgroundColor: "rgba(0,0,0,0.6)" },
+                                            }}
+                                        >
+                                            <span style={{ fontSize: "2rem" }}>❮</span>
+                                        </IconButton>
+                                    )}
+
+                                    {/* Flèche droite */}
+                                    {currentImages.length > 1 && (
+                                        <IconButton
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                nextImage();
+                                            }}
+                                            sx={{
+                                                position: "absolute",
+                                                right: 20,
+                                                top: "50%",
+                                                transform: "translateY(-50%)",
+                                                backgroundColor: "rgba(0,0,0,0.4)",
+                                                color: "#fff",
+                                                "&:hover": { backgroundColor: "rgba(0,0,0,0.6)" },
+                                            }}
+                                        >
+                                            <span style={{ fontSize: "2rem" }}>❯</span>
+                                        </IconButton>
+                                    )}
                                     {currentImages[currentIndex].comment && (
                                         <Typography variant="body2" sx={{ mt: 2, color: '#fff' }}>
                                             {currentImages[currentIndex].comment}
                                         </Typography>
-                                    )}
-                                    {currentImages.length > 1 && (
-                                        <div style={{ marginTop: "10px", display: "flex", gap: "1rem" }}>
-                                            <Button onClick={prevImage} variant="contained">Précédent</Button>
-                                            <Button onClick={nextImage} variant="contained">Suivant</Button>
-                                        </div>
                                     )}
                                 </DialogContent>
                             </>

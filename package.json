@@ -1,4 +1,10 @@
 {
+  "name": "champis-net",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  },
   "devDependencies": {
     "esbuild": "^0.25.9",
     "react": "^19.1.1",
