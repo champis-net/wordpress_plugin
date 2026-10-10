@@ -11,7 +11,7 @@
  * Plugin Name:       Champis.net
  * Plugin URI:        https://champis.net/d/1025454-plugin-wordpress
  * Description:       Affiche les prochains événements mycologiques et la liste des espèces d'une exposition publiés sur le forum champis.net.
- * Version:           3.0.0
+ * Version:           3.0.1
  * Requires at least: 6.6
  * Requires PHP:      7.2
  * Author:            Félicien Corbat

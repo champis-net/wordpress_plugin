@@ -4,7 +4,7 @@ Tags: champignons, mycologie, événements, exposition, société
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 3.0.0
+Stable tag: 3.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -73,6 +73,9 @@ Selon les codes courts utilisés, l'extension lit des données publiques sur les
 Conditions d'utilisation et confidentialité : https://champis.net
 
 == Changelog ==
+
+= 3.0.1 =
+* Expositions : la colonne Photos n'apparaît que si l'exposition a des photos.
 
 = 3.0.0 =
 * Nouveau code court `[champis-expo-N]` : liste des espèces d'une exposition, lue depuis le nouveau forum champis.net.
