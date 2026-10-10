@@ -195,6 +195,14 @@ function Expo({ exhibitionId }) {
 
     const sortedFindings = useMemo(() => sortFindings(findings, sort), [findings, sort]);
 
+    // La colonne Photos seulement si au moins une espèce de l'exposition en a
+    // (pas seulement celles de la page affichée : la colonne ne doit pas
+    // apparaître et disparaître d'une page à l'autre).
+    const hasPhotos = useMemo(
+        () => findings.some(finding => (finding.attributes.photos ?? []).length > 0),
+        [findings],
+    );
+
     // Nom scientifique, nom vernaculaire, famille ou numéro.
     const filteredFindings = useMemo(() => {
         const term = normalize(searchTerm.trim());
@@ -341,13 +349,13 @@ function Expo({ exhibitionId }) {
                                             </TableSortLabel>
                                         </TableCell>
                                     ))}
-                                    <TableCell sx={{ ...cellSx, fontWeight: "bold" }}>Photos</TableCell>
+                                    {hasPhotos && <TableCell sx={{ ...cellSx, fontWeight: "bold" }}>Photos</TableCell>}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {filteredFindings.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={4} sx={cellSx}>
+                                        <TableCell colSpan={Object.keys(SORTS).length + (hasPhotos ? 1 : 0)} sx={cellSx}>
                                             Aucune espèce ne correspond à « {searchTerm.trim()} ».
                                         </TableCell>
                                     </TableRow>
@@ -378,7 +386,7 @@ function Expo({ exhibitionId }) {
                                                 <TableCell sx={familyCellSx}>
                                                     {species?.family ?? ""}
                                                 </TableCell>
-                                                <TableCell sx={cellSx}>
+                                                {hasPhotos && <TableCell sx={cellSx}>
                                                     {photos.length > 0 && (
                                                         <IconButton
                                                             onClick={() => openViewer(finding)}
@@ -411,7 +419,7 @@ function Expo({ exhibitionId }) {
                                                             </Badge>
                                                         </IconButton>
                                                     )}
-                                                </TableCell>
+                                                </TableCell>}
                                             </TableRow>
                                         );
                                     })}
