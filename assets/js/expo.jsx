@@ -104,14 +104,27 @@ function normalize(text) {
 // Tri naturel en français (« 2a » avant « 10a », accents ignorés).
 const collator = new Intl.Collator("fr", { numeric: true, sensitivity: "base" });
 
+// Les colonnes triables, dans l'ordre du tableau. N° seulement si
+// l'exposition numérote ses espèces (voir hasNumbers).
 const SORTS = {
+    number: { label: "N°", value: (finding) => finding.attributes.label },
     scientific: { label: "Nom scientifique", value: (finding) => finding.attributes.speciesDisplay?.canonicalName },
     vernacular: { label: "Nom vernaculaire", value: (finding) => finding.attributes.vernacularName },
     family: { label: "Famille", value: (finding) => finding.attributes.speciesDisplay?.family },
 };
 
-// Les valeurs manquantes (non déterminé, pas de nom vernaculaire…) restent
-// en fin de liste dans les deux sens de tri.
+// Par numéro (« 2a » avant « 10a ») si au moins une espèce en a un, sinon
+// par nom scientifique.
+function hasNumbers(findings) {
+    return findings.some(finding => finding.attributes.label);
+}
+
+function defaultSort(findings) {
+    return { key: hasNumbers(findings) ? "number" : "scientific", direction: "asc" };
+}
+
+// Les valeurs manquantes (non déterminé, pas de nom vernaculaire, pas de
+// numéro…) restent en fin de liste dans les deux sens de tri.
 function sortFindings(findings, { key, direction }) {
     const value = SORTS[key].value;
     const factor = direction === "asc" ? 1 : -1;
@@ -154,6 +167,8 @@ function speciesName(finding) {
 const NARROW = "@container (max-width: 500px)";
 const cellSx = { color: "inherit", borderBottom: "1px solid currentColor", [NARROW]: { px: 1 } };
 const familyCellSx = { ...cellSx, [NARROW]: { ...cellSx[NARROW], display: "none" } };
+// N° : aussi étroite que ses numéros (« 1657a »), sur une ligne.
+const numberCellSx = { ...cellSx, width: "1%", whiteSpace: "nowrap" };
 
 function Expo({ exhibitionId }) {
     const [exhibition, setExhibition] = useState(null);
@@ -194,6 +209,7 @@ function Expo({ exhibitionId }) {
                 }
                 setExhibition(json.data);
                 setFindings(json.included ?? []);
+                setSort(defaultSort(json.included ?? []));
                 setStatus("ready");
             })
             .catch(() => setStatus("error"));
@@ -208,6 +224,12 @@ function Expo({ exhibitionId }) {
     // apparaître et disparaître d'une page à l'autre).
     const hasPhotos = useMemo(
         () => findings.some(finding => (finding.attributes.photos ?? []).length > 0),
+        [findings],
+    );
+
+    // Les colonnes triables affichées : sans N° si aucune espèce n'est numérotée.
+    const columns = useMemo(
+        () => Object.entries(SORTS).filter(([key]) => key !== "number" || hasNumbers(findings)),
         [findings],
     );
 
@@ -339,10 +361,10 @@ function Expo({ exhibitionId }) {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    {Object.entries(SORTS).map(([key, { label }]) => (
+                                    {columns.map(([key, { label }]) => (
                                         <TableCell
                                             key={key}
-                                            sx={{ ...(key === "family" ? familyCellSx : cellSx), fontWeight: "bold" }}
+                                            sx={{ ...(key === "family" ? familyCellSx : key === "number" ? numberCellSx : cellSx), fontWeight: "bold" }}
                                             sortDirection={sort.key === key ? sort.direction : false}
                                         >
                                             <TableSortLabel
@@ -361,7 +383,7 @@ function Expo({ exhibitionId }) {
                             <TableBody>
                                 {filteredFindings.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={Object.keys(SORTS).length + (hasPhotos ? 1 : 0)} sx={cellSx}>
+                                        <TableCell colSpan={columns.length + (hasPhotos ? 1 : 0)} sx={cellSx}>
                                             Aucune espèce ne correspond à « {searchTerm.trim()} ».
                                         </TableCell>
                                     </TableRow>
@@ -374,8 +396,12 @@ function Expo({ exhibitionId }) {
 
                                         return (
                                             <TableRow key={finding.id}>
+                                                {columns[0][0] === "number" && (
+                                                    <TableCell sx={numberCellSx}>
+                                                        {finding.attributes.label ?? ""}
+                                                    </TableCell>
+                                                )}
                                                 <TableCell sx={cellSx}>
-                                                    {finding.attributes.label ?? ""}{" "}
                                                     {species ? (
                                                         <>
                                                             <a href={`${apiBase()}/species/${finding.attributes.gbifId}`}>

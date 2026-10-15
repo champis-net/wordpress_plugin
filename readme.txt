@@ -4,7 +4,7 @@ Tags: champignons, mycologie, événements, exposition, société
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 3.0.3
+Stable tag: 3.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,7 @@ Le code court `[champis-expo-N]`, où N est le numéro de l'exposition, affiche 
 * les dates de l'exposition, son lieu et son nombre d'espèces ;
 * pour chaque espèce, son nom scientifique (avec un lien vers sa page sur champis.net), son nom vernaculaire, sa famille et ses photos ;
 * une recherche par nom, famille ou numéro, qui ne tient pas compte des accents ;
-* le tri par colonne et une pagination ;
+* si l'exposition numérote ses espèces, une colonne N° et l'ordre des numéros, sinon l'ordre alphabétique des noms scientifiques ; le tri par colonne et une pagination ;
 * les photos en grand dans une visionneuse (flèches du clavier ou glissement du doigt pour passer d'une photo à l'autre) ;
 * un bouton pour télécharger la liste complète au format Excel.
 
@@ -73,6 +73,9 @@ Selon les codes courts utilisés, l'extension lit des données publiques sur les
 Conditions d'utilisation et confidentialité : https://champis.net
 
 == Changelog ==
+
+= 3.1.0 =
+* Expositions : si l'exposition numérote ses espèces, une colonne N° (triable) s'affiche en premier et la liste est d'abord dans l'ordre des numéros (« 2a » avant « 10a »), y compris dans l'export Excel. Sans numéros, rien ne change : pas de colonne N° et ordre alphabétique par nom scientifique.
 
 = 3.0.3 =
 * Expositions : le texte de la liste n'est plus affiché en tout petit avec les thèmes qui réduisent la taille de base de la page (par exemple html { font-size: 62.5% }).
