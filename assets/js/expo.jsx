@@ -23,9 +23,9 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 // exhibition.jsx pour comparaison) :
 // - Réponse JSON:API (data.attributes.*, données liées dans "included"),
 //   pas un objet plat.
-// - Le titre affiché est attributes.name (ex: "Exposition 2025"), pas
-//   attributes.description (souvent vide côté Flarum - c'est un champ
-//   distinct, facultatif).
+// - attributes.name (ex: "Exposition 2025") ne sert qu'au nom du fichier
+//   Excel : il n'est pas affiché, l'article ou la page qui contient le
+//   code court a déjà son propre titre.
 // - species.no devient finding.label (même rôle : le numéro de
 //   détermination affiché à côté du nom).
 // - species.id (identifiant GBIF) devient finding.gbifId.
@@ -72,6 +72,12 @@ function loadXlsx() {
 // boutons et icônes (au lieu du bleu de MUI). La couleur est lue sur un
 // lien temporaire placé dans le conteneur, donc avec les styles du thème
 // WordPress à cet endroit précis.
+//
+// Les tailles de MUI sont en rem, calculées pour une page de base 16px. Un
+// thème qui met la sienne à 10px (html { font-size: 62.5% }, courant)
+// réduisait tout le texte de la liste à 8,75px au lieu de 14px
+// (champignondelemont, octobre 2026) : MUI reçoit la taille réelle de la
+// page et recalcule ses rem en conséquence.
 function siteTheme(container) {
     const probe = document.createElement("a");
     probe.href = "#";
@@ -79,8 +85,10 @@ function siteTheme(container) {
     const linkColor = getComputedStyle(probe).color;
     probe.remove();
 
+    const htmlFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
     return createTheme({
-        typography: { fontFamily: "inherit" },
+        typography: { fontFamily: "inherit", htmlFontSize },
         palette: linkColor ? { primary: { main: linkColor } } : {},
         components: {
             MuiButton: { styleOverrides: { root: { textTransform: "none" } } },
@@ -217,7 +225,6 @@ function Expo({ exhibitionId }) {
     if (status === "loading") {
         return (
             <div className="champis-expo-root" aria-busy="true">
-                <Skeleton width="40%" height={36} />
                 <Skeleton width="55%" />
                 {[0, 1, 2, 3, 4].map(i => <Skeleton key={i} height={52} />)}
             </div>
@@ -285,7 +292,7 @@ function Expo({ exhibitionId }) {
         setViewerOpen(true);
     };
 
-    const { name, startDate, endDate, location } = exhibition.attributes;
+    const { startDate, endDate, location } = exhibition.attributes;
     const summary = [
         formatDates(startDate, endDate),
         location,
@@ -297,7 +304,6 @@ function Expo({ exhibitionId }) {
         // son @container), pas à celle de l'écran - la colonne de contenu du
         // thème peut être étroite même sur un grand écran (barre latérale).
         <div className="champis-expo-root" style={{ containerType: "inline-size" }}>
-            <Typography variant="h6" component="h3" sx={{ mb: 0.5 }}>{name}</Typography>
             <Typography variant="body2" sx={{ mb: 2, opacity: 0.8 }}>{summary}</Typography>
 
             {findings.length === 0 ? (
