@@ -5,12 +5,11 @@
 //   d'embarquer leur propre copie (~170 Ko de moins chacun).
 // - exhibition.js (intranet.champis.net, à retirer après la migration)
 //   reste construit comme avant, React compris.
-// - La bibliothèque xlsx n'est plus dans expo.js : son build prêt à
-//   l'emploi est copié à côté et chargé seulement au clic sur « Télécharger
-//   Excel » (voir loadXlsx() dans assets/js/expo.jsx).
+// - expo.js n'a pas de bibliothèque d'interface, et ses styles
+//   (assets/js/expo.css) y sont embarqués comme texte (loader "text") :
+//   un seul fichier à charger.
 
 import * as esbuild from "esbuild";
-import { copyFile } from "node:fs/promises";
 
 const WP_REACT_GLOBALS = {
     "react": "React",
@@ -37,7 +36,7 @@ const wpReact = {
 const common = {
     bundle: true,
     minify: true,
-    loader: { ".js": "jsx" },
+    loader: { ".js": "jsx", ".css": "text" },
     define: { "process.env.NODE_ENV": '"production"' },
     logLevel: "info",
 };
@@ -46,5 +45,4 @@ await Promise.all([
     esbuild.build({ ...common, entryPoints: ["assets/js/expo.jsx"], outfile: "assets/dist/expo.js", plugins: [wpReact] }),
     esbuild.build({ ...common, entryPoints: ["assets/js/events.jsx"], outfile: "assets/dist/events.js", plugins: [wpReact] }),
     esbuild.build({ ...common, entryPoints: ["assets/js/exhibition.jsx"], outfile: "assets/dist/exhibition.js" }),
-    copyFile("node_modules/xlsx/dist/xlsx.mini.min.js", "assets/dist/xlsx.mini.min.js"),
 ]);

@@ -11,7 +11,7 @@
  * Plugin Name:       Champis.net
  * Plugin URI:        https://champis.net/d/1025454-plugin-wordpress
  * Description:       Affiche les prochains événements mycologiques et la liste des espèces d'une exposition publiés sur le forum champis.net.
- * Version:           3.1.0
+ * Version:           3.2.0
  * Requires at least: 6.6
  * Requires PHP:      7.2
  * Author:            Félicien Corbat
@@ -140,8 +140,8 @@ add_filter('the_content', 'champis_net_add_expo_react', 20);
 // injectée en JS (window.champisExpoConfig.apiBase) plutôt que codée en
 // dur dans le bundle - un changement de domaine (dev -> prod) ne demande
 // alors qu'un changement de la constante ci-dessus, pas une recompilation.
-// React vient de WordPress (voir build.mjs), et la bibliothèque xlsx n'est
-// chargée qu'au clic sur « Télécharger Excel » (xlsxUrl).
+// React vient de WordPress (voir build.mjs) ; les fichiers Excel et PDF,
+// de champis.net.
 function champis_register_expo_react() {
     wp_register_script(
         'champis-expo',
@@ -152,7 +152,6 @@ function champis_register_expo_react() {
     );
     wp_localize_script('champis-expo', 'champisExpoConfig', [
         'apiBase' => CHAMPIS_FLARUM_API_BASE,
-        'xlsxUrl' => plugin_dir_url(__FILE__) . 'assets/dist/xlsx.mini.min.js?ver=' . filemtime(plugin_dir_path(__FILE__) . 'assets/dist/xlsx.mini.min.js'),
     ]);
 }
 add_action('wp_enqueue_scripts', 'champis_register_expo_react');

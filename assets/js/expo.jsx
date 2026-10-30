@@ -1,140 +1,81 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
-import {
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
-    Paper, Button, Typography, Dialog, DialogContent, DialogTitle,
-    IconButton, TablePagination, Slide, Skeleton, Badge,
-} from "@mui/material";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
-import ImageIcon from "@mui/icons-material/Image";
-import CloseIcon from "@mui/icons-material/Close";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import styles from "./expo.css";
 
-// Parallel, deliberately standalone copy of exhibition.jsx (same UI: table,
-// recherche, pagination, galerie d'images, export Excel) for expositions
-// venant du nouveau forum Flarum plutôt que de intranet.champis.net -
-// intranet.champis.net sera retiré une fois la migration terminée, donc ce
-// fichier ne partage volontairement aucun code avec exhibition.jsx pour que
-// ce retrait soit un simple "supprimer ce fichier-là", pas un démêlage
-// d'abstraction partagée.
+// Liste des espèces d'une exposition du forum champis.net, code court
+// [champis-expo-N]. Volontairement sans code commun avec exhibition.jsx
+// (intranet.champis.net) : ce dernier sera retiré une fois la migration
+// terminée, ce qui doit rester un simple "supprimer ce fichier-là".
 //
-// Différences de données par rapport à intranet.champis.net (voir
-// exhibition.jsx pour comparaison) :
-// - Réponse JSON:API (data.attributes.*, données liées dans "included"),
-//   pas un objet plat.
-// - attributes.name (ex: "Exposition 2025") ne sert qu'au nom du fichier
-//   Excel : il n'est pas affiché, l'article ou la page qui contient le
-//   code court a déjà son propre titre.
-// - species.no devient finding.label (même rôle : le numéro de
-//   détermination affiché à côté du nom).
-// - species.id (identifiant GBIF) devient finding.gbifId.
-// - Une trouvaille sans détermination a speciesDisplay === null (gbifId
-//   à 0) plutôt que canonical_name manquant - géré explicitement plus bas.
-// - Les photos (attributes.photos, {url, type, thumbnailUrl, width,
-//   height}) n'ont pas de légende propre (pas de champ "comment" côté
-//   Flarum) - la visionneuse affiche le nom de l'espèce à la place.
-//   thumbnailUrl peut être null (photo pas encore réduite côté Flarum) :
-//   une icône remplace alors la miniature.
+// Une seule requête pour toute l'exposition (quelque 25 Ko compressés pour
+// 350 espèces) : la recherche, le tri et « Afficher plus » sont ensuite
+// immédiats. Pas de bibliothèque d'interface : le thème WordPress donne
+// sa police, ses couleurs, ses champs et ses boutons (expo.css n'a que la
+// mise en page et la visionneuse). Les fichiers Excel et PDF sont ceux de
+// champis.net.
+//
+// La réponse JSON:API de champis.net :
+// - data.attributes : name, startDate, endDate, location ;
+// - included : les espèces (attributes.label, le numéro ; gbifId, 0 pour
+//   une espèce non déterminée ; speciesDisplay, null dans ce cas ;
+//   vernacularName ; createdAt ; photos, {url, thumbnailUrl, width,
+//   height} - thumbnailUrl peut être null, une icône remplace alors la
+//   miniature).
 
-const Transition = forwardRef(function Transition(props, ref) {
-    return <Slide direction="up" ref={ref} {...props} />;
-});
+// Espèces affichées d'abord, puis à chaque clic sur « Afficher plus ».
+const PAGE_SIZE = 20;
 
 function apiBase() {
     return (window.champisExpoConfig && window.champisExpoConfig.apiBase) || "https://champis.net";
 }
 
-// La bibliothèque xlsx (~250 Ko) n'est chargée qu'au premier clic sur
-// « Télécharger Excel », pas avec le reste de la page (voir build.mjs).
-let xlsxPromise = null;
-
-function loadXlsx() {
-    if (window.XLSX) return Promise.resolve(window.XLSX);
-    if (!xlsxPromise) {
-        xlsxPromise = new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = window.champisExpoConfig.xlsxUrl;
-            script.onload = () => resolve(window.XLSX);
-            script.onerror = () => {
-                xlsxPromise = null; // permet de réessayer
-                script.remove();
-                reject(new Error("xlsx"));
-            };
-            document.head.appendChild(script);
-        });
-    }
-    return xlsxPromise;
-}
-
-// Thème MUI aux couleurs du site qui affiche le widget : sa police (au lieu
-// de Roboto, que MUI suppose chargée) et la couleur de ses liens pour les
-// boutons et icônes (au lieu du bleu de MUI). La couleur est lue sur un
-// lien temporaire placé dans le conteneur, donc avec les styles du thème
-// WordPress à cet endroit précis.
-//
-// Les tailles de MUI sont en rem, calculées pour une page de base 16px. Un
-// thème qui met la sienne à 10px (html { font-size: 62.5% }, courant)
-// réduisait tout le texte de la liste à 8,75px au lieu de 14px
-// (champignondelemont, octobre 2026) : MUI reçoit la taille réelle de la
-// page et recalcule ses rem en conséquence.
-function siteTheme(container) {
-    const probe = document.createElement("a");
-    probe.href = "#";
-    container.appendChild(probe);
-    const linkColor = getComputedStyle(probe).color;
-    probe.remove();
-
-    const htmlFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-
-    return createTheme({
-        typography: { fontFamily: "inherit", htmlFontSize },
-        palette: linkColor ? { primary: { main: linkColor } } : {},
-        components: {
-            MuiButton: { styleOverrides: { root: { textTransform: "none" } } },
-        },
-    });
+// expo.css, une fois par page.
+function addStyles() {
+    if (document.getElementById("champis-expo-styles")) return;
+    const style = document.createElement("style");
+    style.id = "champis-expo-styles";
+    style.textContent = styles;
+    document.head.appendChild(style);
 }
 
 // Recherche insensible à la casse et aux accents : « cepe » trouve « Cèpe ».
 function normalize(text) {
-    return (text ?? "").toString().normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    return (text ?? "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 // Tri naturel en français (« 2a » avant « 10a », accents ignorés).
 const collator = new Intl.Collator("fr", { numeric: true, sensitivity: "base" });
 
-// Les colonnes triables, dans l'ordre du tableau. N° seulement si
-// l'exposition numérote ses espèces (voir hasNumbers).
-const SORTS = {
-    number: { label: "N°", value: (finding) => finding.attributes.label },
-    scientific: { label: "Nom scientifique", value: (finding) => finding.attributes.speciesDisplay?.canonicalName },
-    vernacular: { label: "Nom vernaculaire", value: (finding) => finding.attributes.vernacularName },
-    family: { label: "Famille", value: (finding) => finding.attributes.speciesDisplay?.family },
+function speciesName(finding) {
+    return finding.attributes.speciesDisplay?.canonicalName ?? "Non déterminé";
+}
+
+// Une valeur manquante (pas de numéro, pas de nom vernaculaire, espèce non
+// déterminée) en fin de liste.
+const byText = (value) => (a, b) => {
+    const va = value(a);
+    const vb = value(b);
+    if (!va || !vb) return (va ? 0 : 1) - (vb ? 0 : 1);
+    return collator.compare(va, vb);
 };
 
-// Par numéro (« 2a » avant « 10a ») si au moins une espèce en a un, sinon
-// par nom scientifique.
-function hasNumbers(findings) {
-    return findings.some(finding => finding.attributes.label);
-}
+const byName = byText((finding) => finding.attributes.speciesDisplay?.canonicalName);
 
-function defaultSort(findings) {
-    return { key: hasNumbers(findings) ? "number" : "scientific", direction: "asc" };
-}
+// Par date d'ajout, puis par numéro d'enregistrement pour celles ajoutées
+// au même moment.
+const byAdded = (a, b) =>
+    (a.attributes.createdAt ?? "").localeCompare(b.attributes.createdAt ?? "") || Number(a.id) - Number(b.id);
 
-// Les valeurs manquantes (non déterminé, pas de nom vernaculaire, pas de
-// numéro…) restent en fin de liste dans les deux sens de tri.
-function sortFindings(findings, { key, direction }) {
-    const value = SORTS[key].value;
-    const factor = direction === "asc" ? 1 : -1;
-    return [...findings].sort((a, b) => {
-        const va = value(a);
-        const vb = value(b);
-        if (!va || !vb) return (va ? 0 : 1) - (vb ? 0 : 1);
-        return factor * collator.compare(va, vb);
-    });
-}
+// Les ordres du menu « Trier par », chacun suivi de l'ordre des noms.
+// Numéro seulement si l'exposition numérote ses espèces.
+const SORTS = {
+    number: { label: "Numéro", compare: byText((finding) => finding.attributes.label) },
+    scientific: { label: "Nom scientifique", compare: byName },
+    vernacular: { label: "Nom vernaculaire", compare: byText((finding) => finding.attributes.vernacularName) },
+    newest: { label: "Derniers ajouts", compare: (a, b) => byAdded(b, a) },
+    oldest: { label: "Premiers ajouts", compare: byAdded },
+};
 
 // Dates « AAAA-MM-JJ » lues comme des dates locales (new Date("2026-08-23")
 // serait minuit UTC, donc la veille sur un fuseau à l'ouest de Greenwich).
@@ -152,103 +93,115 @@ function formatDates(startDate, endDate) {
     return format.formatRange ? format.formatRange(start, end) : `${format.format(start)} – ${format.format(end)}`;
 }
 
-function slugify(text) {
-    return normalize(text).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
+// Icônes (Material Symbols), en ligne : pas de police d'icônes à charger.
+const ICONS = {
+    image: "M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm1-4h12l-3.75-5-3 4L9 13z",
+    close: "M6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5l5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6z",
+    prev: "M14 18l-6-6 6-6 1.4 1.4-4.6 4.6 4.6 4.6z",
+    next: "M12.6 12 8 7.4 9.4 6l6 6-6 6L8 16.6z",
+};
 
-function speciesName(finding) {
-    return finding.attributes.speciesDisplay?.canonicalName ?? "Non déterminé";
+function Icon({ name }) {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d={ICONS[name]} />
+        </svg>
+    );
 }
-
-// Widget étroit (téléphone, ou colonne de contenu à côté d'une barre latérale
-// même sur grand écran) : marges réduites et colonne Famille masquée, sinon
-// le tableau sort de son cadre. Selon la largeur du widget lui-même
-// (@container, voir containerType sur .champis-expo-root), pas de l'écran.
-const NARROW = "@container (max-width: 500px)";
-const cellSx = { color: "inherit", borderBottom: "1px solid currentColor", [NARROW]: { px: 1 } };
-const familyCellSx = { ...cellSx, [NARROW]: { ...cellSx[NARROW], display: "none" } };
-// N° : aussi étroite que ses numéros (« 1657a »), sur une ligne.
-const numberCellSx = { ...cellSx, width: "1%", whiteSpace: "nowrap" };
 
 function Expo({ exhibitionId }) {
     const [exhibition, setExhibition] = useState(null);
     const [findings, setFindings] = useState([]);
     // loading | ready | notFound | error
     const [status, setStatus] = useState("loading");
-
-    // pagination
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
-
-    // recherche et tri
-    const [searchTerm, setSearchTerm] = useState("");
-    const [sort, setSort] = useState({ key: "scientific", direction: "asc" });
-
-    // visionneuse : la trouvaille reste affichée pendant l'animation de fermeture
-    const [viewerFinding, setViewerFinding] = useState(null);
-    const [viewerOpen, setViewerOpen] = useState(false);
-
-    // export Excel
-    const [exporting, setExporting] = useState(false);
-    const [exportFailed, setExportFailed] = useState(false);
+    const [search, setSearch] = useState("");
+    const [sort, setSort] = useState("scientific");
+    const [shownCount, setShownCount] = useState(PAGE_SIZE);
+    // La photo ouverte dans la visionneuse (sa place dans slides), ou null.
+    const [viewerIndex, setViewerIndex] = useState(null);
 
     const load = useCallback(() => {
         setStatus("loading");
         fetch(`${apiBase()}/api/champis-exhibitions/${exhibitionId}?include=findings`)
-            .then(res => {
+            .then((res) => {
                 // 404 : exposition inexistante, ou d'une société dont les
                 // expositions ne sont pas publiques.
                 if (res.status === 404) return null;
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return res.json();
             })
-            .then(json => {
+            .then((json) => {
                 if (!json || !json.data) {
                     setStatus("notFound");
                     return;
                 }
+                const included = (json.included ?? []).filter((item) => item.type === "champis-exhibitions-findings");
                 setExhibition(json.data);
-                setFindings(json.included ?? []);
-                setSort(defaultSort(json.included ?? []));
+                setFindings(included);
+                // Par numéro (« 2a » avant « 10a ») si au moins une espèce
+                // en a un, sinon par nom scientifique.
+                setSort(included.some((finding) => finding.attributes.label) ? "number" : "scientific");
                 setStatus("ready");
             })
             .catch(() => setStatus("error"));
     }, [exhibitionId]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        load();
+    }, [load]);
 
-    const sortedFindings = useMemo(() => sortFindings(findings, sort), [findings, sort]);
+    const hasNumbers = useMemo(() => findings.some((finding) => finding.attributes.label), [findings]);
+    const hasPhotos = useMemo(() => findings.some((finding) => (finding.attributes.photos ?? []).length > 0), [findings]);
 
-    // La colonne Photos seulement si au moins une espèce de l'exposition en a
-    // (pas seulement celles de la page affichée : la colonne ne doit pas
-    // apparaître et disparaître d'une page à l'autre).
-    const hasPhotos = useMemo(
-        () => findings.some(finding => (finding.attributes.photos ?? []).length > 0),
-        [findings],
-    );
+    // Triée, puis cherchée : nom scientifique, nom vernaculaire ou numéro.
+    const list = useMemo(() => {
+        const compare = SORTS[sort].compare;
+        const term = normalize(search.trim());
 
-    // Les colonnes triables affichées : sans N° si aucune espèce n'est numérotée.
-    const columns = useMemo(
-        () => Object.entries(SORTS).filter(([key]) => key !== "number" || hasNumbers(findings)),
-        [findings],
-    );
+        return [...findings]
+            .sort((a, b) => compare(a, b) || byName(a, b))
+            .filter(
+                (finding) =>
+                    !term ||
+                    [finding.attributes.speciesDisplay?.canonicalName, finding.attributes.vernacularName, finding.attributes.label].some((text) =>
+                        normalize(text).includes(term),
+                    ),
+            );
+    }, [findings, sort, search]);
 
-    // Nom scientifique, nom vernaculaire, famille ou numéro.
-    const filteredFindings = useMemo(() => {
-        const term = normalize(searchTerm.trim());
-        if (!term) return sortedFindings;
-        return sortedFindings.filter(finding => {
-            const species = finding.attributes.speciesDisplay;
-            return [species?.canonicalName, species?.family, finding.attributes.vernacularName, finding.attributes.label]
-                .some(text => normalize(text).includes(term));
-        });
-    }, [sortedFindings, searchTerm]);
+    // Toutes les photos de la liste telle qu'affichée (pas seulement des
+    // espèces déjà affichées), pour la visionneuse ; firstSlide : la place
+    // de la première photo de chaque espèce.
+    const { slides, firstSlide } = useMemo(() => {
+        const slides = [];
+        const firstSlide = new Map();
+        for (const finding of list) {
+            const photos = finding.attributes.photos ?? [];
+            if (photos.length) firstSlide.set(finding.id, slides.length);
+            const name = speciesName(finding);
+            const vernacular = finding.attributes.vernacularName;
+            for (const photo of photos) {
+                slides.push({
+                    url: photo.url,
+                    width: photo.width,
+                    height: photo.height,
+                    alt: vernacular ? `${name} (${vernacular})` : name,
+                    label: finding.attributes.label,
+                    name,
+                    determined: !!finding.attributes.speciesDisplay,
+                    vernacular,
+                });
+            }
+        }
+        return { slides, firstSlide };
+    }, [list]);
 
     if (status === "loading") {
         return (
-            <div className="champis-expo-root" aria-busy="true">
-                <Skeleton width="55%" />
-                {[0, 1, 2, 3, 4].map(i => <Skeleton key={i} height={52} />)}
+            <div className="champis-expo-root champis-expo-skeleton" aria-busy="true" aria-label="Chargement des espèces">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <span key={i} />
+                ))}
             </div>
         );
     }
@@ -261,439 +214,298 @@ function Expo({ exhibitionId }) {
         return (
             <div className="champis-expo-root">
                 <p>Les espèces de cette exposition n'ont pas pu être chargées.</p>
-                <Button variant="outlined" onClick={load}>Réessayer</Button>
+                <button type="button" className="wp-element-button" onClick={load}>
+                    Réessayer
+                </button>
             </div>
         );
     }
 
-    const downloadExcel = async () => {
-        setExporting(true);
-        setExportFailed(false);
-        let XLSX;
-        try {
-            XLSX = await loadXlsx();
-        } catch {
-            setExportFailed(true);
-            return;
-        } finally {
-            setExporting(false);
-        }
-
-        // Toute la liste (pas seulement le résultat de la recherche), dans
-        // l'ordre de tri affiché.
-        const rows = sortedFindings.map(finding => {
-            const species = finding.attributes.speciesDisplay;
-            return {
-                "Numéro": finding.attributes.label ?? "",
-                "Nom scientifique": species ? species.canonicalName : "",
-                "Auteur": species?.author?.trim() ?? "",
-                "Famille": species?.family ?? "",
-                "Nom vernaculaire": finding.attributes.vernacularName ?? "",
-                "No GBIF": finding.attributes.gbifId ? `${finding.attributes.gbifId}` : "",
-            };
-        });
-
-        const worksheet = XLSX.utils.json_to_sheet(rows);
-        worksheet["!cols"] = [{ wch: 10 }, { wch: 32 }, { wch: 24 }, { wch: 20 }, { wch: 32 }, { wch: 10 }];
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Espèces");
-        const name = [slugify(exhibition.attributes.name), exhibition.attributes.startDate].filter(Boolean).join("-");
-        XLSX.writeFile(workbook, `${name || `exposition-${exhibitionId}`}.xlsx`);
-    };
-
-    const handleSort = (key) => {
-        setSort(current => ({
-            key,
-            direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
-        }));
-        setPage(0);
-    };
-
-    const openViewer = (finding) => {
-        setViewerFinding(finding);
-        setViewerOpen(true);
-    };
-
     const { startDate, endDate, location } = exhibition.attributes;
-    const summary = [
-        formatDates(startDate, endDate),
-        location,
-        `${findings.length} ${findings.length > 1 ? "espèces" : "espèce"}`,
-    ].filter(Boolean).join(" · ");
+    const summary = [formatDates(startDate, endDate), location, `${findings.length} ${findings.length > 1 ? "espèces" : "espèce"}`]
+        .filter(Boolean)
+        .join(" · ");
+    const shown = list.slice(0, shownCount);
+    const files = `${apiBase()}/api/champis-exhibitions/${exhibitionId}/findings`;
 
     return (
-        // containerType : la pagination s'adapte à la largeur du widget (voir
-        // son @container), pas à celle de l'écran - la colonne de contenu du
-        // thème peut être étroite même sur un grand écran (barre latérale).
-        <div className="champis-expo-root" style={{ containerType: "inline-size" }}>
-            <Typography variant="body2" sx={{ mb: 2, opacity: 0.8 }}>{summary}</Typography>
+        <div className="champis-expo-root">
+            <p className="champis-expo-summary">{summary}</p>
 
             {findings.length === 0 ? (
-                <Typography variant="body1">Aucune espèce trouvée pour l'instant</Typography>
+                <p>Aucune espèce trouvée pour l'instant.</p>
             ) : (
                 <>
-                    {/* Champ de recherche - stylé par le thème WordPress, comme
-                        les autres champs du site */}
-                    <div style={{ marginBottom: "1rem" }}>
+                    <div className="champis-expo-toolbar">
                         <input
                             type="search"
                             aria-label="Rechercher une espèce"
-                            placeholder="Nom, famille ou numéro..."
-                            value={searchTerm}
+                            placeholder="Nom ou numéro…"
+                            value={search}
                             onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                // Sinon, depuis la page 3, une recherche à 4
-                                // résultats affiche un tableau vide.
-                                setPage(0);
+                                setSearch(e.target.value);
+                                setShownCount(PAGE_SIZE);
                             }}
-                            style={{ width: "100%", maxWidth: "400px" }}
                         />
+                        <label>
+                            Trier par
+                            <select
+                                value={sort}
+                                onChange={(e) => {
+                                    setSort(e.target.value);
+                                    setShownCount(PAGE_SIZE);
+                                }}
+                            >
+                                {Object.entries(SORTS)
+                                    .filter(([key]) => key !== "number" || hasNumbers)
+                                    .map(([key, { label }]) => (
+                                        <option key={key} value={key}>
+                                            {label}
+                                        </option>
+                                    ))}
+                            </select>
+                        </label>
+                        {slides.length > 0 && (
+                            <button type="button" className="wp-element-button" onClick={() => setViewerIndex(0)}>
+                                Diaporama
+                            </button>
+                        )}
                     </div>
 
-                    <TableContainer
-                        component={Paper}
-                        sx={{
-                            backgroundColor: 'transparent',
-                            boxShadow: 'none',
-                            color: 'inherit',
-                        }}
-                    >
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    {columns.map(([key, { label }]) => (
-                                        <TableCell
-                                            key={key}
-                                            sx={{ ...(key === "family" ? familyCellSx : key === "number" ? numberCellSx : cellSx), fontWeight: "bold" }}
-                                            sortDirection={sort.key === key ? sort.direction : false}
-                                        >
-                                            <TableSortLabel
-                                                active={sort.key === key}
-                                                direction={sort.key === key ? sort.direction : "asc"}
-                                                onClick={() => handleSort(key)}
-                                                sx={{ color: "inherit !important", "& .MuiTableSortLabel-icon": { color: "inherit !important" } }}
-                                            >
-                                                {label}
-                                            </TableSortLabel>
-                                        </TableCell>
-                                    ))}
-                                    {hasPhotos && <TableCell sx={{ ...cellSx, fontWeight: "bold" }}>Photos</TableCell>}
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {filteredFindings.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={columns.length + (hasPhotos ? 1 : 0)} sx={cellSx}>
-                                            Aucune espèce ne correspond à « {searchTerm.trim()} ».
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                                {filteredFindings
-                                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                    .map(finding => {
-                                        const species = finding.attributes.speciesDisplay;
-                                        const photos = finding.attributes.photos ?? [];
-
-                                        return (
-                                            <TableRow key={finding.id}>
-                                                {columns[0][0] === "number" && (
-                                                    <TableCell sx={numberCellSx}>
-                                                        {finding.attributes.label ?? ""}
-                                                    </TableCell>
-                                                )}
-                                                <TableCell sx={cellSx}>
-                                                    {species ? (
-                                                        <>
-                                                            <a href={`${apiBase()}/species/${finding.attributes.gbifId}`}>
-                                                                <i>{species.canonicalName}</i>
-                                                            </a> {species.author?.trim()}
-                                                        </>
-                                                    ) : (
-                                                        <i>Non déterminé</i>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell sx={cellSx}>
-                                                    {finding.attributes.vernacularName ?? ""}
-                                                </TableCell>
-                                                <TableCell sx={familyCellSx}>
-                                                    {species?.family ?? ""}
-                                                </TableCell>
-                                                {hasPhotos && <TableCell sx={cellSx}>
-                                                    {photos.length > 0 && (
-                                                        <IconButton
-                                                            onClick={() => openViewer(finding)}
-                                                            aria-label={photos.length > 1
-                                                                ? `Voir les ${photos.length} photos de ${speciesName(finding)}`
-                                                                : `Voir la photo de ${speciesName(finding)}`}
-                                                            sx={{ p: 0.5 }}
-                                                        >
-                                                            <Badge
-                                                                badgeContent={photos.length > 1 ? photos.length : 0}
-                                                                color="primary"
-                                                                // Rentrée dans le coin de la miniature, pour ne
-                                                                // pas déborder du tableau sur téléphone.
-                                                                sx={{ "& .MuiBadge-badge": { top: 8, right: 8 } }}
-                                                            >
-                                                                {photos[0].thumbnailUrl ? (
-                                                                    <img
-                                                                        src={photos[0].thumbnailUrl}
-                                                                        alt=""
-                                                                        width={48}
-                                                                        height={48}
-                                                                        loading="lazy"
-                                                                        // Taille en style : le thème WordPress force
-                                                                        // souvent img { height: auto }.
-                                                                        style={{ display: "block", width: "48px", height: "48px", maxWidth: "none", objectFit: "cover", borderRadius: "4px" }}
-                                                                    />
-                                                                ) : (
-                                                                    <ImageIcon color="primary" />
-                                                                )}
-                                                            </Badge>
-                                                        </IconButton>
-                                                    )}
-                                                </TableCell>}
-                                            </TableRow>
-                                        );
-                                    })}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-
-                    <TablePagination
-                        rowsPerPageOptions={[10, 20, 50]}
-                        component="div"
-                        count={filteredFindings.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={(event, newPage) => setPage(newPage)}
-                        onRowsPerPageChange={(event) => {
-                            setRowsPerPage(parseInt(event.target.value, 10));
-                            setPage(0);
-                        }}
-                        labelRowsPerPage="Espèces par page :"
-                        labelDisplayedRows={({ from, to, count }) => `${from}–${to} sur ${count}`}
-                        getItemAriaLabel={(type) => ({
-                            first: "Première page",
-                            last: "Dernière page",
-                            next: "Page suivante",
-                            previous: "Page précédente",
-                        })[type]}
-                        sx={{
-                            color: "inherit",
-                            // Calée sur les bords du tableau (MUI met 24 px à gauche).
-                            "& .MuiToolbar-root": { pl: 0, pr: 0 },
-                            "& .MuiSvgIcon-root": { color: "inherit" },
-                            // Ces deux libellés sont des <p> : sans margin: 0, la
-                            // marge que le thème WordPress met sous les paragraphes
-                            // les remonte par rapport au sélecteur et aux flèches.
-                            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
-                                color: "inherit",
-                                margin: 0,
-                            },
-                            "& .MuiInputBase-root": { color: "inherit" },
-                            "& .MuiSelect-icon": { color: "inherit" },
-                            // Widget étroit (téléphone, colonne à côté d'une barre
-                            // latérale) : sans le libellé « Espèces par page », le
-                            // sélecteur, « 1–10 sur 31 » et les flèches tiennent
-                            // sur une ligne, au lieu de pousser les flèches hors
-                            // du cadre.
-                            "@container (max-width: 400px)": {
-                                "& .MuiTablePagination-selectLabel": { display: "none" },
-                            },
-                        }}
-                    />
-
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={downloadExcel}
-                        disabled={exporting}
-                        sx={{ mt: 2 }}
-                    >
-                        {exporting ? "Préparation..." : "Télécharger la liste (Excel)"}
-                    </Button>
-                    {exportFailed && (
-                        <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                            Le téléchargement a échoué, veuillez réessayer.
-                        </Typography>
+                    {list.length === 0 ? (
+                        <p>Aucune espèce ne correspond à « {search.trim()} ».</p>
+                    ) : (
+                        <table className="champis-expo-table">
+                            <thead>
+                                <tr>
+                                    {hasNumbers && <th className="champis-expo-no">N°</th>}
+                                    <th>Espèce</th>
+                                    {hasPhotos && <th className="champis-expo-photo">Photo</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {shown.map((finding) => (
+                                    <Row
+                                        key={finding.id}
+                                        finding={finding}
+                                        hasNumbers={hasNumbers}
+                                        hasPhotos={hasPhotos}
+                                        onPhoto={() => setViewerIndex(firstSlide.get(finding.id))}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
                     )}
 
-                    <PhotoViewer
-                        finding={viewerFinding}
-                        open={viewerOpen}
-                        onClose={() => setViewerOpen(false)}
-                    />
+                    {shown.length < list.length && (
+                        <div className="champis-expo-more">
+                            <span>
+                                {shown.length} sur {list.length}
+                            </span>
+                            <button type="button" className="wp-element-button" onClick={() => setShownCount((count) => count + PAGE_SIZE)}>
+                                Afficher plus
+                            </button>
+                        </div>
+                    )}
+
+                    <p className="champis-expo-downloads">
+                        <span>Télécharger la liste :</span>
+                        <a href={`${files}.xlsx`}>Excel</a>
+                        <a href={`${files}.pdf`}>PDF</a>
+                    </p>
+
+                    {viewerIndex !== null && slides.length > 0 && (
+                        <Viewer
+                            slides={slides}
+                            index={Math.min(viewerIndex, slides.length - 1)}
+                            onIndex={setViewerIndex}
+                            onClose={() => setViewerIndex(null)}
+                        />
+                    )}
                 </>
             )}
         </div>
     );
 }
 
-// Visionneuse plein écran : flèches du clavier, glissement du doigt,
-// légende avec le nom de l'espèce, photo suivante préchargée.
-function PhotoViewer({ finding, open, onClose }) {
-    const [index, setIndex] = useState(0);
-    const touchStartX = useRef(null);
+function Row({ finding, hasNumbers, hasPhotos, onPhoto }) {
+    const species = finding.attributes.speciesDisplay;
+    const vernacular = finding.attributes.vernacularName;
+    const photos = finding.attributes.photos ?? [];
 
-    const photos = finding?.attributes.photos ?? [];
-    const count = photos.length;
+    return (
+        <tr>
+            {hasNumbers && <td className="champis-expo-no">{finding.attributes.label ?? ""}</td>}
+            <td>
+                {species ? (
+                    <>
+                        <a href={`${apiBase()}/species/${finding.attributes.gbifId}`}>
+                            <i>{species.canonicalName}</i>
+                        </a>{" "}
+                        {species.author?.trim()}
+                    </>
+                ) : (
+                    <i>Non déterminé</i>
+                )}
+                {vernacular && <span className="champis-expo-vernacular">{vernacular}</span>}
+            </td>
+            {hasPhotos && (
+                <td className="champis-expo-photo">
+                    {photos.length > 0 && (
+                        <button
+                            type="button"
+                            className="champis-expo-thumb"
+                            onClick={onPhoto}
+                            aria-label={
+                                photos.length > 1
+                                    ? `Voir les ${photos.length} photos de ${speciesName(finding)}`
+                                    : `Voir la photo de ${speciesName(finding)}`
+                            }
+                        >
+                            {photos[0].thumbnailUrl ? (
+                                <img src={photos[0].thumbnailUrl} alt="" width={48} height={48} loading="lazy" />
+                            ) : (
+                                <Icon name="image" />
+                            )}
+                            {photos.length > 1 && <span className="champis-expo-count">{photos.length}</span>}
+                        </button>
+                    )}
+                </td>
+            )}
+        </tr>
+    );
+}
 
-    const next = useCallback(() => setIndex(i => (i + 1) % count), [count]);
-    const prev = useCallback(() => setIndex(i => (i - 1 + count) % count), [count]);
+// Visionneuse plein écran, par-dessus la page : toutes les photos de la
+// liste, l'une après l'autre - flèches de l'écran ou du clavier, glissement
+// du doigt, Échap ou un clic à côté pour fermer. La photo suivante est
+// préchargée ; le focus revient à ce qui l'avait ouverte.
+function Viewer({ slides, index, onIndex, onClose }) {
+    const dialog = useRef(null);
+    const touchStart = useRef(null);
+    const count = slides.length;
+    const slide = slides[index];
 
-    // Nouvelle trouvaille ouverte : on repart de sa première photo.
-    useEffect(() => { setIndex(0); }, [finding]);
+    const next = useCallback(() => onIndex((i) => (i + 1) % count), [count, onIndex]);
+    const prev = useCallback(() => onIndex((i) => (i - 1 + count) % count), [count, onIndex]);
+
+    // À l'ouverture : la page ne défile plus derrière, le focus va au bouton
+    // Fermer ; à la fermeture, tout revient comme avant.
+    useEffect(() => {
+        const opener = document.activeElement;
+        const overflow = document.documentElement.style.overflow;
+        document.documentElement.style.overflow = "hidden";
+        dialog.current?.querySelector("button")?.focus();
+
+        return () => {
+            document.documentElement.style.overflow = overflow;
+            opener?.focus?.();
+        };
+    }, []);
 
     useEffect(() => {
-        if (!open || count < 2) return undefined;
         const onKeyDown = (e) => {
-            if (e.key === "ArrowRight") next();
-            if (e.key === "ArrowLeft") prev();
+            if (e.key === "Escape") onClose();
+            else if (e.key === "ArrowRight" && count > 1) next();
+            else if (e.key === "ArrowLeft" && count > 1) prev();
+            else if (e.key === "Tab") {
+                // Le focus reste dans la visionneuse.
+                const buttons = [...dialog.current.querySelectorAll("button")];
+                const position = buttons.indexOf(document.activeElement);
+                e.preventDefault();
+                buttons[(position + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus();
+            }
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [open, count, next, prev]);
+    }, [count, next, prev, onClose]);
 
     useEffect(() => {
-        if (open && count > 1) {
-            new Image().src = photos[(index + 1) % count].url;
-        }
-    }, [open, index, count, photos]);
-
-    if (!finding || count === 0) return null;
-
-    const photo = photos[Math.min(index, count - 1)];
-    const species = finding.attributes.speciesDisplay;
-    const vernacular = finding.attributes.vernacularName;
+        if (count > 1) new Image().src = slides[(index + 1) % count].url;
+    }, [slides, index, count]);
 
     const onTouchEnd = (e) => {
-        if (touchStartX.current === null || count < 2) return;
-        const dx = e.changedTouches[0].clientX - touchStartX.current;
-        touchStartX.current = null;
-        if (Math.abs(dx) > 50) {
+        if (!touchStart.current || count < 2) return;
+        const dx = e.changedTouches[0].clientX - touchStart.current.x;
+        const dy = e.changedTouches[0].clientY - touchStart.current.y;
+        touchStart.current = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
             if (dx < 0) next();
             else prev();
         }
     };
 
-    const arrowSx = {
-        position: "absolute",
-        top: "50%",
-        transform: "translateY(-50%)",
-        backgroundColor: "rgba(0,0,0,0.4)",
-        color: "#fff",
-        "&:hover": { backgroundColor: "rgba(0,0,0,0.6)" },
-    };
+    const stop = (e) => e.stopPropagation();
 
-    return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            fullScreen
-            aria-label={`Photos de ${speciesName(finding)}`}
-            slots={{ transition: Transition }}
-            slotProps={{
-                transition: { timeout: 500 },
-                backdrop: {
-                    sx: {
-                        backdropFilter: 'blur(8px)',
-                        backgroundColor: 'rgba(0,0,0,0.4)',
-                    },
-                },
-                paper: {
-                    sx: {
-                        backgroundColor: 'transparent',
-                        boxShadow: 'none',
-                        color: '#fff',
-                    },
-                },
+    return createPortal(
+        <div
+            ref={dialog}
+            className="champis-expo-viewer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Photos de l'exposition, ${index + 1} sur ${count}`}
+            onClick={onClose}
+            onTouchStart={(e) => {
+                touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }}
+            onTouchEnd={onTouchEnd}
         >
-            <DialogTitle
-                component="div"
-                sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    color: '#fff',
-                }}
-            >
-                {count > 1 ? `${index + 1}/${count}` : ""}
-                <IconButton onClick={onClose} aria-label="Fermer" sx={{ color: '#fff' }}>
-                    <CloseIcon />
-                </IconButton>
-            </DialogTitle>
-            <DialogContent
-                onClick={onClose}
-                onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
-                onTouchEnd={onTouchEnd}
-                sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                }}
-            >
-                <img
-                    src={photo.url}
-                    alt={vernacular ? `${speciesName(finding)} (${vernacular})` : speciesName(finding)}
-                    width={photo.width ?? undefined}
-                    height={photo.height ?? undefined}
-                    style={{
-                        maxWidth: "100%",
-                        maxHeight: "80vh",
-                        width: "auto",
-                        height: "auto",
-                        objectFit: "contain",
-                        borderRadius: "8px",
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                />
-                <Typography
-                    variant="body1"
-                    sx={{ mt: 1.5, textAlign: "center", color: "#fff" }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {species ? <i>{species.canonicalName}</i> : "Non déterminé"}
-                    {vernacular ? ` – ${vernacular}` : ""}
-                </Typography>
+            <div className="champis-expo-viewer-top">
+                <span>{count > 1 ? `${index + 1} / ${count}` : ""}</span>
+                <button type="button" aria-label="Fermer" onClick={onClose}>
+                    <Icon name="close" />
+                </button>
+            </div>
 
-                {count > 1 && (
-                    <>
-                        <IconButton
-                            aria-label="Photo précédente"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                prev();
-                            }}
-                            sx={{ ...arrowSx, left: 20 }}
-                        >
-                            <ChevronLeftIcon fontSize="large" />
-                        </IconButton>
-                        <IconButton
-                            aria-label="Photo suivante"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                next();
-                            }}
-                            sx={{ ...arrowSx, right: 20 }}
-                        >
-                            <ChevronRightIcon fontSize="large" />
-                        </IconButton>
-                    </>
-                )}
-            </DialogContent>
-        </Dialog>
+            <figure>
+                <img
+                    key={slide.url}
+                    src={slide.url}
+                    alt={slide.alt}
+                    width={slide.width ?? undefined}
+                    height={slide.height ?? undefined}
+                    onClick={stop}
+                />
+                <figcaption onClick={stop}>
+                    {slide.label && <>{slide.label} · </>}
+                    {slide.determined ? <i>{slide.name}</i> : slide.name}
+                    {slide.vernacular && <> · {slide.vernacular}</>}
+                </figcaption>
+            </figure>
+
+            {count > 1 && (
+                <>
+                    <button
+                        type="button"
+                        className="champis-expo-viewer-prev"
+                        aria-label="Photo précédente"
+                        onClick={(e) => {
+                            stop(e);
+                            prev();
+                        }}
+                    >
+                        <Icon name="prev" />
+                    </button>
+                    <button
+                        type="button"
+                        className="champis-expo-viewer-next"
+                        aria-label="Photo suivante"
+                        onClick={(e) => {
+                            stop(e);
+                            next();
+                        }}
+                    >
+                        <Icon name="next" />
+                    </button>
+                </>
+            )}
+        </div>,
+        document.body,
     );
 }
 
 // Initialisation
-document.querySelectorAll(".champis-expo").forEach(domContainer => {
-    const exhibitionId = domContainer.getAttribute("data-exhibition-id");
-    const root = createRoot(domContainer);
-    root.render(
-        <ThemeProvider theme={siteTheme(domContainer)}>
-            <Expo exhibitionId={exhibitionId} />
-        </ThemeProvider>
-    );
+document.querySelectorAll(".champis-expo").forEach((domContainer) => {
+    addStyles();
+    createRoot(domContainer).render(<Expo exhibitionId={domContainer.getAttribute("data-exhibition-id")} />);
 });

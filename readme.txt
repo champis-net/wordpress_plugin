@@ -4,7 +4,7 @@ Tags: champignons, mycologie, événements, exposition, société
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 3.1.0
+Stable tag: 3.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,18 +17,19 @@ Affiche sur votre site les prochains événements mycologiques et la liste des e
 * **les prochains événements mycologiques** (expositions, sorties, journées d'étude...) annoncés sur le forum ;
 * **la liste des espèces d'une exposition** saisie par votre société sur champis.net.
 
-L'affichage reprend la police et la couleur des liens de votre thème, et s'adapte aux petits écrans.
+L'affichage reprend le style de votre thème (police, couleurs, champs et boutons) et s'adapte aux petits écrans.
 
 = Liste des espèces d'une exposition =
 
 Le code court `[champis-expo-N]`, où N est le numéro de l'exposition, affiche :
 
 * les dates de l'exposition, son lieu et son nombre d'espèces ;
-* pour chaque espèce, son nom scientifique (avec un lien vers sa page sur champis.net), son nom vernaculaire, sa famille et ses photos ;
-* une recherche par nom, famille ou numéro, qui ne tient pas compte des accents ;
-* si l'exposition numérote ses espèces, une colonne N° et l'ordre des numéros, sinon l'ordre alphabétique des noms scientifiques ; le tri par colonne et une pagination ;
-* les photos en grand dans une visionneuse (flèches du clavier ou glissement du doigt pour passer d'une photo à l'autre) ;
-* un bouton pour télécharger la liste complète au format Excel.
+* pour chaque espèce, son nom scientifique (avec un lien vers sa page sur champis.net) et son nom vernaculaire, son numéro si l'exposition numérote ses espèces, et une miniature de ses photos ;
+* une recherche par nom ou numéro, qui ne tient pas compte des accents ;
+* un menu « Trier par » : numéro (par défaut si l'exposition numérote ses espèces), nom scientifique (sinon), nom vernaculaire, derniers ou premiers ajouts ;
+* les 20 premières espèces, puis 20 de plus à chaque clic sur « Afficher plus » ;
+* un diaporama de toutes les photos de la liste, à partir de la première ou de celle d'une espèce (flèches de l'écran ou du clavier, glissement du doigt), légendées de leur numéro, nom scientifique et nom vernaculaire ;
+* des liens pour télécharger la liste complète au format Excel ou PDF, préparée par champis.net.
 
 = Prochains événements =
 
@@ -74,6 +75,13 @@ Conditions d'utilisation et confidentialité : https://champis.net
 
 == Changelog ==
 
+= 3.2.0 =
+* Expositions : un script environ 15 fois plus léger (16 Ko au lieu de 236), sans bibliothèque d'interface ; la liste prend le style des champs, listes et boutons du thème.
+* Expositions : une colonne « Espèce » réunit le nom scientifique et le nom vernaculaire, la colonne Famille est retirée ; le tri se fait par un menu « Trier par », qui propose aussi les derniers et les premiers ajouts.
+* Expositions : « Afficher plus » (20 espèces de plus à chaque clic) remplace la pagination par pages.
+* Expositions : un diaporama de toutes les photos de la liste ; une miniature l'ouvre à la photo de son espèce.
+* Expositions : les fichiers Excel et PDF sont ceux de champis.net (la bibliothèque Excel n'est plus chargée), et le PDF est nouveau.
+
 = 3.1.0 =
 * Expositions : si l'exposition numérote ses espèces, une colonne N° (triable) s'affiche en premier et la liste est d'abord dans l'ordre des numéros (« 2a » avant « 10a »), y compris dans l'export Excel. Sans numéros, rien ne change : pas de colonne N° et ordre alphabétique par nom scientifique.
 
@@ -107,6 +115,6 @@ Les sources sont dans `assets/js/` et sont compilées dans `assets/dist/` :
     npm install
     npm run build
 
-Voir `build.mjs` : `expo.js` et `events.js` utilisent le React fourni par WordPress, `exhibition.js` embarque le sien, et la bibliothèque xlsx (`assets/dist/xlsx.mini.min.js`) n'est chargée qu'au clic sur « Télécharger la liste (Excel) ».
+Voir `build.mjs` : `expo.js` et `events.js` utilisent le React fourni par WordPress, `exhibition.js` embarque le sien. Les styles de `expo.js` (`assets/js/expo.css`) y sont embarqués.
 
 Pour tester avec une autre instance du forum, définissez la constante `CHAMPIS_FLARUM_API_BASE` (par exemple dans `wp-config.php`) avant le chargement de l'extension.
