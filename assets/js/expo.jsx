@@ -4,16 +4,13 @@ import { createRoot } from "react-dom/client";
 import styles from "./expo.css";
 
 // Liste des espèces d'une exposition du forum champis.net, code court
-// [champis-expo-N]. Volontairement sans code commun avec exhibition.jsx
-// (intranet.champis.net) : ce dernier sera retiré une fois la migration
-// terminée, ce qui doit rester un simple "supprimer ce fichier-là".
+// [champis-expo-N].
 //
 // Une seule requête pour toute l'exposition (quelque 25 Ko compressés pour
 // 350 espèces) : la recherche, le tri et « Afficher plus » sont ensuite
 // immédiats. Pas de bibliothèque d'interface : le thème WordPress donne
-// sa police, ses couleurs, ses champs et ses boutons (expo.css n'a que la
-// mise en page et la visionneuse). Les fichiers Excel et PDF sont ceux de
-// champis.net.
+// sa police, ses couleurs et ses boutons (expo.css se charge du reste, voir
+// son en-tête). Les fichiers Excel et PDF sont ceux de champis.net.
 //
 // La réponse JSON:API de champis.net :
 // - data.attributes : name, startDate, endDate, location ;

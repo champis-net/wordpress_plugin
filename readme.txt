@@ -4,7 +4,7 @@ Tags: champignons, mycologie, événements, exposition, société
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 3.2.0
+Stable tag: 3.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,7 +17,7 @@ Affiche sur votre site les prochains événements mycologiques et la liste des e
 * **les prochains événements mycologiques** (expositions, sorties, journées d'étude...) annoncés sur le forum ;
 * **la liste des espèces d'une exposition** saisie par votre société sur champis.net.
 
-L'affichage reprend le style de votre thème (police, couleurs, champs et boutons) et s'adapte aux petits écrans.
+L'affichage reprend la police, les couleurs et les boutons de votre thème, et s'adapte aux petits écrans.
 
 = Liste des espèces d'une exposition =
 
@@ -34,10 +34,6 @@ Le code court `[champis-expo-N]`, où N est le numéro de l'exposition, affiche 
 = Prochains événements =
 
 Le code court `[champis-evenements]` affiche les 10 prochains événements : dates, titre (avec un lien vers l'annonce sur champis.net), lieu et lien vers le site de l'événement.
-
-= Anciens codes courts =
-
-`[champis-events]` (prochains événements depuis api.champis.net) et `[champis-exhibition-N]` (exposition depuis intranet.champis.net) fonctionnent toujours, mais seront retirés dans une prochaine version. Remplacez-les par `[champis-evenements]` et `[champis-expo-N]`.
 
 == Installation ==
 
@@ -65,15 +61,15 @@ Sur le forum : [Plugin WordPress](https://champis.net/d/1025454-plugin-wordpress
 
 == Services externes ==
 
-Selon les codes courts utilisés, l'extension lit des données publiques sur les services suivants. Aucune donnée des visiteurs du site n'y est envoyée, hormis ce que contient toute requête web (adresse IP, navigateur).
-
-* champis.net (forum) : `[champis-expo-N]` et `[champis-evenements]`, lus directement par le navigateur du visiteur. Les noms d'espèces renvoient vers les pages espèces de champis.net.
-* api.champis.net : `[champis-events]`, lu par le serveur du site.
-* intranet.champis.net : `[champis-exhibition-N]`, lu par le navigateur du visiteur. Les noms d'espèces renvoient vers gbif.org.
+`[champis-expo-N]` et `[champis-evenements]` lisent des données publiques sur le forum champis.net, directement depuis le navigateur du visiteur. Aucune donnée des visiteurs du site n'y est envoyée, hormis ce que contient toute requête web (adresse IP, navigateur). Les noms d'espèces renvoient vers les pages espèces de champis.net.
 
 Conditions d'utilisation et confidentialité : https://champis.net
 
 == Changelog ==
+
+= 3.2.1 =
+* Expositions : la liste reste lisible quel que soit le thème (taille du texte, champs, boutons et tableau), par exemple avec Divi.
+* Retrait des anciens codes courts `[champis-events]` et `[champis-exhibition-N]`, dont les services (api.champis.net et intranet.champis.net) n'existent plus. Utilisez `[champis-evenements]` et `[champis-expo-N]`.
 
 = 3.2.0 =
 * Expositions : un script environ 15 fois plus léger (16 Ko au lieu de 236), sans bibliothèque d'interface ; la liste prend le style des champs, listes et boutons du thème.
@@ -105,6 +101,9 @@ Conditions d'utilisation et confidentialité : https://champis.net
 
 == Upgrade Notice ==
 
+= 3.2.1 =
+Les anciens codes courts `[champis-events]` et `[champis-exhibition-N]` sont retirés : remplacez-les par `[champis-evenements]` et `[champis-expo-N]`.
+
 = 3.0.0 =
 Nécessite WordPress 6.6. Nouveaux codes courts `[champis-expo-N]` et `[champis-evenements]` ; les anciens fonctionnent toujours.
 
@@ -115,6 +114,6 @@ Les sources sont dans `assets/js/` et sont compilées dans `assets/dist/` :
     npm install
     npm run build
 
-Voir `build.mjs` : `expo.js` et `events.js` utilisent le React fourni par WordPress, `exhibition.js` embarque le sien. Les styles de `expo.js` (`assets/js/expo.css`) y sont embarqués.
+Voir `build.mjs` : `expo.js` et `events.js` utilisent le React fourni par WordPress. Les styles de `expo.js` (`assets/js/expo.css`) y sont embarqués.
 
 Pour tester avec une autre instance du forum, définissez la constante `CHAMPIS_FLARUM_API_BASE` (par exemple dans `wp-config.php`) avant le chargement de l'extension.

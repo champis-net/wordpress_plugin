@@ -1,17 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-// Parallel, standalone equivalent of champis_net_add_events() in
-// champis-net.php (liste "prochains événements" via api.champis.net,
-// rendue côté PHP) - celle-ci vient du nouveau forum Flarum à la place, et
-// utilise React comme demandé. Ne partage pas de code avec la version PHP
-// existante, même raison que expo.jsx vs exhibition.jsx : la partie
-// api.champis.net sera retirée une fois la migration terminée, et ça doit
-// alors rester un simple retrait de fichier(s), pas un démêlage.
-//
-// Pas de MUI ici (contrairement à expo.jsx) : une liste de quelques
-// événements n'a besoin ni de tableau, ni de pagination, ni de modale -
-// les inclure aurait juste alourdi le bundle pour rien.
+// Prochains événements du forum champis.net, code court [champis-evenements].
 //
 // Champs utilisés (voir UpcomingEventsResource côté champis-flarum) :
 // discussionId, title, startDate, endDate, location, url - url est le

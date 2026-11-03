@@ -1,8 +1,11 @@
 /*
  * Styles du widget [champis-expo-N] (expo.jsx), embarqués dans expo.js et
- * ajoutés une fois à la page. Le minimum : le thème WordPress donne déjà sa
- * police, ses couleurs, ses champs, ses listes déroulantes et ses boutons.
- * Seule la visionneuse a son propre style, sombre, par-dessus la page.
+ * ajoutés une fois à la page. Le thème WordPress donne sa police, ses couleurs
+ * et ses boutons. La taille du texte, les champs et le tableau sont fixés ici :
+ * tous les thèmes ne s'en chargent pas (Divi laisse au champ de recherche son
+ * style de navigateur, 13 px) ou le font mal pour une liste (cadre et 24 px de
+ * marges aux cellules de Divi). La visionneuse a son propre style, sombre,
+ * par-dessus la page.
  */
 
 .champis-expo-root {
@@ -10,6 +13,13 @@
        celle de l'écran : la colonne de contenu peut être étroite à côté
        d'une barre latérale, même sur un grand écran. */
     container-type: inline-size;
+    /* La taille du texte qui l'entoure, dans ces limites, mais pas le reste :
+       le module Texte de Divi, en 24 px centré, en faisait des lignes de
+       43 px de haut. */
+    font-size: clamp(14px, 1em, 18px);
+    font-weight: normal;
+    line-height: 1.5;
+    text-align: left;
 }
 
 .champis-expo-summary {
@@ -26,6 +36,19 @@
     margin: 0 0 1em;
 }
 
+/* Pas de couleur de texte ni de fond : ceux du navigateur restent lisibles
+   l'un sur l'autre, y compris sur un thème sombre. */
+.champis-expo-toolbar input[type="search"],
+.champis-expo-toolbar select {
+    box-sizing: border-box;
+    height: auto;
+    min-height: 2.5em;
+    padding: 0.35em 0.6em;
+    border: 1px solid rgba(128, 128, 128, 0.5);
+    border-radius: 4px;
+    font: inherit;
+}
+
 .champis-expo-toolbar input[type="search"] {
     flex: 1 1 14em;
     max-width: 25em;
@@ -34,26 +57,41 @@
 
 .champis-expo-toolbar label {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.4em;
     margin: 0;
     font-weight: normal;
+    white-space: nowrap;
 }
 
 .champis-expo-toolbar select {
     width: auto;
+    max-width: 100%;
     margin: 0;
 }
 
-.champis-expo-table {
+/* Les boutons du thème, à la hauteur des champs : leurs marges de WordPress,
+   en em, sont prévues pour un bouton seul. */
+.champis-expo-root .wp-element-button {
+    min-height: 2.5em;
+    padding: 0.35em 1em;
+    font-size: inherit;
+    line-height: 1.5;
+}
+
+/* Aussi précises que les règles de thèmes comme Divi
+   (.entry-content table:not(.variations), .entry-content tr td), qui
+   l'emporteraient sinon. */
+.champis-expo-root table.champis-expo-table {
     width: 100%;
     margin: 0 0 1em;
     border: 0;
     border-collapse: collapse;
 }
 
-.champis-expo-table th,
-.champis-expo-table td {
+.champis-expo-root .champis-expo-table th,
+.champis-expo-root .champis-expo-table td {
     padding: 0.55em 0.6em;
     border: 0;
     border-bottom: 1px solid rgba(128, 128, 128, 0.35);
@@ -62,13 +100,13 @@
     vertical-align: middle;
 }
 
-.champis-expo-table th {
+.champis-expo-root .champis-expo-table th {
     font-weight: bold;
 }
 
 /* N° et photo : aussi étroites que leur contenu (« 1657a », une miniature). */
-.champis-expo-table .champis-expo-no,
-.champis-expo-table .champis-expo-photo {
+.champis-expo-root .champis-expo-table .champis-expo-no,
+.champis-expo-root .champis-expo-table .champis-expo-photo {
     width: 1%;
     white-space: nowrap;
 }
@@ -162,8 +200,8 @@
 }
 
 @container (max-width: 500px) {
-    .champis-expo-table th,
-    .champis-expo-table td {
+    .champis-expo-root .champis-expo-table th,
+    .champis-expo-root .champis-expo-table td {
         padding: 0.5em 0.3em;
     }
 }

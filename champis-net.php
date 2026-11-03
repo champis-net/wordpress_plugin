@@ -11,7 +11,7 @@
  * Plugin Name:       Champis.net
  * Plugin URI:        https://champis.net/d/1025454-plugin-wordpress
  * Description:       Affiche les prochains événements mycologiques et la liste des espèces d'une exposition publiés sur le forum champis.net.
- * Version:           3.2.0
+ * Version:           3.2.1
  * Requires at least: 6.6
  * Requires PHP:      7.2
  * Author:            Félicien Corbat
@@ -32,81 +32,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 */
 
-add_filter( 'the_content', 'champis_net_add_events');
-function champis_net_add_events( $content ) {
-    
-    if (strpos($content, '[champis-events]') !== false) {
-        $now=time();
-        $response = wp_remote_get( 'https://api.champis.net/v1/events');
-        
-        if ( is_wp_error( $response ) ) {
-             return $content;
-        } else {
-            $events = json_decode(wp_remote_retrieve_body( $response ), true);
-            $events = $events['hydra:member'];
-        
-            $addContent = "<ul>";
-            foreach($events as $event) {
-                $beginDate = new DateTime($event['beginDate']);
-                $endDate = new DateTime($event['endDate']);
-                $addContent .= "<li><div>".$beginDate->format('d.m.Y')." - ".$endDate->format('d.m.Y')."</div>";
-                $addContent .= "<div><strong><a href=https://champis.net/viewtopic.php?t=".$event['topic']['id'].">".$event['topic']['title']."</a></strong></div>";
-                $addContent .= "<div>".$event['place']."</div>";
-                $addContent .= "<div><a href=".$event['url'].">".$event['url']."</a></div><br/>";
-             }
-        
-            $addContent .= "</ul>";
-            $number = 1;
-            
-            $content = str_replace('[champis-events]', $addContent, $content, $number);
-            return $content;
-        }
-    }
-    
-    return $content;
-        
-}
-
 // Les scripts React ne sont que déclarés ici (wp_register_script) : chaque
 // filtre the_content ci-dessous ne les met en file (wp_enqueue_script) que
 // s'il trouve son shortcode, pour que les pages sans widget ne les
 // téléchargent pas. Ça marche parce qu'ils sont chargés en pied de page,
 // imprimé après le contenu.
-
-// Injecte les div cibles à la place des shortcodes
-function champis_net_add_exhibition_react($content) {
-    if (preg_match_all('/\[champis-exhibition-(\d+)\]/', $content, $matches)) {
-        foreach ($matches[0] as $i => $fullTag) {
-            $div = '<div class="champis-exhibition" data-exhibition-id="' . esc_attr($matches[1][$i]) . '"></div>';
-            $content = str_replace($fullTag, $div, $content);
-        }
-        wp_enqueue_script('champis-exhibition');
-    }
-    return $content;
-}
-add_filter('the_content', 'champis_net_add_exhibition_react', 20);
-
-// Déclare le script React compilé
-function champis_register_react() {
-    wp_register_script(
-        'champis-exhibition',
-        plugin_dir_url(__FILE__) . 'assets/dist/exhibition.js',
-        ['wp-element'], // exhibition.js embarque toutefois son propre React (voir build.mjs)
-        filemtime(plugin_dir_path(__FILE__) . 'assets/dist/exhibition.js'),
-        true
-    );
-}
-add_action('wp_enqueue_scripts', 'champis_register_react');
-
-// --- Expositions provenant du nouveau forum Flarum (remplace à terme
-// intranet.champis.net ci-dessus) ---
-//
-// Volontairement une copie parallèle des 2 fonctions ci-dessus, pas une
-// factorisation avec elles : la partie intranet.champis.net sera retirée
-// une fois la migration terminée, ce qui doit alors rester un simple
-// "supprimer ces 2 fonctions-là et leur enqueue", sans démêler un code
-// partagé avec ce qui reste. Voir aussi assets/js/expo.jsx, qui ne
-// partage pas non plus de code avec exhibition.jsx pour la même raison.
 
 // Le forum champis.net (Flarum depuis le 10 octobre 2026), lu directement
 // par le navigateur du visiteur : CORS y est ouvert pour les expositions
@@ -117,6 +47,8 @@ add_action('wp_enqueue_scripts', 'champis_register_react');
 if (! defined('CHAMPIS_FLARUM_API_BASE')) {
     define('CHAMPIS_FLARUM_API_BASE', 'https://champis.net');
 }
+
+// --- Expositions ---
 
 // Injecte les div cibles à la place des shortcodes [champis-expo-N]. Seul
 // sur sa ligne, le shortcode a déjà été entouré d'un <p> par wpautop
@@ -156,14 +88,7 @@ function champis_register_expo_react() {
 }
 add_action('wp_enqueue_scripts', 'champis_register_expo_react');
 
-// --- Prochains événements provenant du nouveau forum Flarum (remplace à
-// terme champis_net_add_events() ci-dessus, qui passe par api.champis.net)
-// ---
-//
-// Copie parallèle, même raison que la section expo ci-dessus : la partie
-// api.champis.net sera retirée une fois la migration terminée. En React
-// cette fois (contrairement à champis_net_add_events(), du PHP pur) -
-// demandé directement.
+// --- Prochains événements ---
 //
 // Pas de paramètre de nombre d'événements dans le shortcode pour l'instant
 // (data-limit fixé à 10, même défaut que côté Flarum) - à ajouter si
