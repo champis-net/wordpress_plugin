@@ -4,7 +4,7 @@ Tags: champignons, mycologie, événements, exposition, société
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 3.2.1
+Stable tag: 3.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,7 +17,7 @@ Affiche sur votre site les prochains événements mycologiques et la liste des e
 * **les prochains événements mycologiques** (expositions, sorties, journées d'étude...) annoncés sur le forum ;
 * **la liste des espèces d'une exposition** saisie par votre société sur champis.net.
 
-L'affichage reprend la police, les couleurs et les boutons de votre thème, et s'adapte aux petits écrans.
+L'affichage reprend la police et les couleurs de votre thème, et s'adapte aux petits écrans.
 
 = Liste des espèces d'une exposition =
 
@@ -25,7 +25,7 @@ Le code court `[champis-expo-N]`, où N est le numéro de l'exposition, affiche 
 
 * les dates de l'exposition, son lieu et son nombre d'espèces ;
 * pour chaque espèce, son nom scientifique (avec un lien vers sa page sur champis.net) et son nom vernaculaire, son numéro si l'exposition numérote ses espèces, et une miniature de ses photos ;
-* une recherche par nom ou numéro, qui ne tient pas compte des accents ;
+* une recherche par nom (et par numéro si l'exposition numérote ses espèces), qui ne tient pas compte des accents ;
 * un menu « Trier par » : numéro (par défaut si l'exposition numérote ses espèces), nom scientifique (sinon), nom vernaculaire, derniers ou premiers ajouts ;
 * les 20 premières espèces, puis 20 de plus à chaque clic sur « Afficher plus » ;
 * un diaporama de toutes les photos de la liste, à partir de la première ou de celle d'une espèce (flèches de l'écran ou du clavier, glissement du doigt), légendées de leur numéro, nom scientifique et nom vernaculaire ;
@@ -66,6 +66,11 @@ Sur le forum : [Plugin WordPress](https://champis.net/d/1025454-plugin-wordpress
 Conditions d'utilisation et confidentialité : https://champis.net
 
 == Changelog ==
+
+= 3.2.2 =
+* Expositions : des boutons « Diaporama » et « Afficher plus » plus discrets, avec un contour fin plutôt que le bouton plein du thème. « Diaporama » rejoint la ligne du résumé, « Afficher plus » est centré sous la liste.
+* Expositions : une icône devant les liens Excel et PDF.
+* Expositions : le champ de recherche indique « Chercher par nom ou numéro… », ou seulement « Chercher par nom… » si l'exposition ne numérote pas ses espèces.
 
 = 3.2.1 =
 * Expositions : la liste reste lisible quel que soit le thème (taille du texte, champs, boutons et tableau), par exemple avec Divi.

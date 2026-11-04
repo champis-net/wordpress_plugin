@@ -9,8 +9,8 @@ import styles from "./expo.css";
 // Une seule requête pour toute l'exposition (quelque 25 Ko compressés pour
 // 350 espèces) : la recherche, le tri et « Afficher plus » sont ensuite
 // immédiats. Pas de bibliothèque d'interface : le thème WordPress donne
-// sa police, ses couleurs et ses boutons (expo.css se charge du reste, voir
-// son en-tête). Les fichiers Excel et PDF sont ceux de champis.net.
+// sa police et ses couleurs (expo.css se charge du reste, voir son en-tête).
+// Les fichiers Excel et PDF sont ceux de champis.net.
 //
 // La réponse JSON:API de champis.net :
 // - data.attributes : name, startDate, endDate, location ;
@@ -96,6 +96,10 @@ const ICONS = {
     close: "M6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5l5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6z",
     prev: "M14 18l-6-6 6-6 1.4 1.4-4.6 4.6 4.6 4.6z",
     next: "M12.6 12 8 7.4 9.4 6l6 6-6 6L8 16.6z",
+    play: "M8 5v14l11-7z",
+    more: "M12 15.4l-6-6L7.4 8l4.6 4.6L16.6 8 18 9.4z",
+    excel: "M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z",
+    pdf: "M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z",
 };
 
 function Icon({ name }) {
@@ -211,7 +215,7 @@ function Expo({ exhibitionId }) {
         return (
             <div className="champis-expo-root">
                 <p>Les espèces de cette exposition n'ont pas pu être chargées.</p>
-                <button type="button" className="wp-element-button" onClick={load}>
+                <button type="button" className="champis-expo-button" onClick={load}>
                     Réessayer
                 </button>
             </div>
@@ -227,7 +231,18 @@ function Expo({ exhibitionId }) {
 
     return (
         <div className="champis-expo-root">
-            <p className="champis-expo-summary">{summary}</p>
+            <div className="champis-expo-header">
+                <p className="champis-expo-summary">{summary}</p>
+                {/* Grisé plutôt que retiré quand la recherche ne laisse aucune
+                    photo : le champ de recherche, juste dessous, ne bouge pas
+                    pendant qu'on y tape. */}
+                {hasPhotos && (
+                    <button type="button" className="champis-expo-button" disabled={slides.length === 0} onClick={() => setViewerIndex(0)}>
+                        <Icon name="play" />
+                        Diaporama
+                    </button>
+                )}
+            </div>
 
             {findings.length === 0 ? (
                 <p>Aucune espèce trouvée pour l'instant.</p>
@@ -237,7 +252,7 @@ function Expo({ exhibitionId }) {
                         <input
                             type="search"
                             aria-label="Rechercher une espèce"
-                            placeholder="Nom ou numéro…"
+                            placeholder={hasNumbers ? "Chercher par nom ou numéro…" : "Chercher par nom…"}
                             value={search}
                             onChange={(e) => {
                                 setSearch(e.target.value);
@@ -262,11 +277,6 @@ function Expo({ exhibitionId }) {
                                     ))}
                             </select>
                         </label>
-                        {slides.length > 0 && (
-                            <button type="button" className="wp-element-button" onClick={() => setViewerIndex(0)}>
-                                Diaporama
-                            </button>
-                        )}
                     </div>
 
                     {list.length === 0 ? (
@@ -299,7 +309,8 @@ function Expo({ exhibitionId }) {
                             <span>
                                 {shown.length} sur {list.length}
                             </span>
-                            <button type="button" className="wp-element-button" onClick={() => setShownCount((count) => count + PAGE_SIZE)}>
+                            <button type="button" className="champis-expo-button" onClick={() => setShownCount((count) => count + PAGE_SIZE)}>
+                                <Icon name="more" />
                                 Afficher plus
                             </button>
                         </div>
@@ -307,8 +318,14 @@ function Expo({ exhibitionId }) {
 
                     <p className="champis-expo-downloads">
                         <span>Télécharger la liste :</span>
-                        <a href={`${files}.xlsx`}>Excel</a>
-                        <a href={`${files}.pdf`}>PDF</a>
+                        <a href={`${files}.xlsx`}>
+                            <Icon name="excel" />
+                            Excel
+                        </a>
+                        <a href={`${files}.pdf`}>
+                            <Icon name="pdf" />
+                            PDF
+                        </a>
                     </p>
 
                     {viewerIndex !== null && slides.length > 0 && (

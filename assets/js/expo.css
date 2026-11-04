@@ -1,11 +1,11 @@
 /*
  * Styles du widget [champis-expo-N] (expo.jsx), embarqués dans expo.js et
- * ajoutés une fois à la page. Le thème WordPress donne sa police, ses couleurs
- * et ses boutons. La taille du texte, les champs et le tableau sont fixés ici :
- * tous les thèmes ne s'en chargent pas (Divi laisse au champ de recherche son
- * style de navigateur, 13 px) ou le font mal pour une liste (cadre et 24 px de
- * marges aux cellules de Divi). La visionneuse a son propre style, sombre,
- * par-dessus la page.
+ * ajoutés une fois à la page. Le thème WordPress donne sa police et ses
+ * couleurs. La taille du texte, les champs, les boutons et le tableau sont
+ * fixés ici : tous les thèmes ne s'en chargent pas (Divi laisse au champ de
+ * recherche son style de navigateur, 13 px) ou le font mal pour une liste
+ * (cadre et 24 px de marges aux cellules de Divi, gros boutons pleins).
+ * La visionneuse a son propre style, sombre, par-dessus la page.
  */
 
 .champis-expo-root {
@@ -22,8 +22,19 @@
     text-align: left;
 }
 
-.champis-expo-summary {
+/* Le résumé à gauche, le diaporama à droite. */
+.champis-expo-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em 1em;
     margin: 0 0 1em;
+}
+
+.champis-expo-root .champis-expo-summary {
+    margin: 0;
+    padding: 0;
     opacity: 0.8;
     font-size: 0.9em;
 }
@@ -49,8 +60,9 @@
     font: inherit;
 }
 
+/* 16em : la place du texte indicatif entier, « Chercher par nom ou numéro… ». */
 .champis-expo-toolbar input[type="search"] {
-    flex: 1 1 14em;
+    flex: 1 1 16em;
     max-width: 25em;
     margin: 0;
 }
@@ -71,13 +83,48 @@
     margin: 0;
 }
 
-/* Les boutons du thème, à la hauteur des champs : leurs marges de WordPress,
-   en em, sont prévues pour un bouton seul. */
-.champis-expo-root .wp-element-button {
+/* Les boutons, à la hauteur des champs et avec le même contour : ceux du thème,
+   pleins et faits pour un appel à l'action, écrasent une liste. La couleur du
+   texte plutôt que celle des liens, qui peut être illisible (jaune sur blanc
+   sur vesnalpes.ch) ; le fond, transparent, convient aussi aux thèmes sombres. */
+.champis-expo-root button.champis-expo-button {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35em;
     min-height: 2.5em;
-    padding: 0.35em 1em;
-    font-size: inherit;
-    line-height: 1.5;
+    padding: 0.35em 0.8em;
+    border: 1px solid rgba(128, 128, 128, 0.5);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.champis-expo-root button.champis-expo-button:hover:not(:disabled) {
+    background: rgba(128, 128, 128, 0.15);
+}
+
+.champis-expo-root button.champis-expo-button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.champis-expo-root button.champis-expo-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.champis-expo-button svg,
+.champis-expo-downloads svg {
+    flex: none;
+    width: 1.25em;
+    height: 1.25em;
+    fill: currentColor;
+}
+
+.champis-expo-button svg {
+    margin-left: -0.15em;
 }
 
 /* Aussi précises que les règles de thèmes comme Divi
@@ -176,8 +223,23 @@
     margin: 0 0 1em;
 }
 
+.champis-expo-more {
+    justify-content: center;
+}
+
+.champis-expo-more span {
+    opacity: 0.8;
+    font-size: 0.9em;
+}
+
 .champis-expo-downloads {
     margin-bottom: 1.5em;
+}
+
+.champis-expo-downloads a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
 }
 
 .champis-expo-skeleton span {
