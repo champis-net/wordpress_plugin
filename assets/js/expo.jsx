@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import styles from "./expo.css";
@@ -18,7 +18,8 @@ import styles from "./expo.css";
 //   une espèce non déterminée ; speciesDisplay, null dans ce cas ;
 //   vernacularName ; createdAt ; photos, {url, thumbnailUrl, width,
 //   height} - thumbnailUrl peut être null, une icône remplace alors la
-//   miniature).
+//   miniature ; notes, les remarques de la société sur l'espèce, en texte
+//   brut, ou null).
 
 // Espèces affichées d'abord, puis à chaque clic sur « Afficher plus ».
 const PAGE_SIZE = 20;
@@ -98,6 +99,7 @@ const ICONS = {
     next: "M12.6 12 8 7.4 9.4 6l6 6-6 6L8 16.6z",
     play: "M8 5v14l11-7z",
     more: "M12 15.4l-6-6L7.4 8l4.6 4.6L16.6 8 18 9.4z",
+    info: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z",
     excel: "M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z",
     pdf: "M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z",
 };
@@ -120,6 +122,8 @@ function Expo({ exhibitionId }) {
     const [shownCount, setShownCount] = useState(PAGE_SIZE);
     // La photo ouverte dans la visionneuse (sa place dans slides), ou null.
     const [viewerIndex, setViewerIndex] = useState(null);
+    // L'espèce dont les remarques sont ouvertes, ou null.
+    const [noteFinding, setNoteFinding] = useState(null);
 
     const load = useCallback(() => {
         setStatus("loading");
@@ -298,6 +302,7 @@ function Expo({ exhibitionId }) {
                                         hasNumbers={hasNumbers}
                                         hasPhotos={hasPhotos}
                                         onPhoto={() => setViewerIndex(firstSlide.get(finding.id))}
+                                        onNote={() => setNoteFinding(finding)}
                                     />
                                 ))}
                             </tbody>
@@ -328,6 +333,8 @@ function Expo({ exhibitionId }) {
                         </a>
                     </p>
 
+                    {noteFinding && <NoteDialog finding={noteFinding} onClose={() => setNoteFinding(null)} />}
+
                     {viewerIndex !== null && slides.length > 0 && (
                         <Viewer
                             slides={slides}
@@ -342,10 +349,12 @@ function Expo({ exhibitionId }) {
     );
 }
 
-function Row({ finding, hasNumbers, hasPhotos, onPhoto }) {
+function Row({ finding, hasNumbers, hasPhotos, onPhoto, onNote }) {
     const species = finding.attributes.speciesDisplay;
+    const author = species?.author?.trim();
     const vernacular = finding.attributes.vernacularName;
     const photos = finding.attributes.photos ?? [];
+    const label = `Remarques sur ${speciesName(finding)}`;
 
     return (
         <tr>
@@ -355,11 +364,23 @@ function Row({ finding, hasNumbers, hasPhotos, onPhoto }) {
                     <>
                         <a href={`${apiBase()}/species/${finding.attributes.gbifId}`}>
                             <i>{species.canonicalName}</i>
-                        </a>{" "}
-                        {species.author?.trim()}
+                        </a>
+                        {author && ` ${author}`}
                     </>
                 ) : (
                     <i>Non déterminé</i>
+                )}
+                {/* Ses remarques, si sa société en a écrit : dans une petite
+                    fenêtre, comme sur champis.net, pour garder une ligne par
+                    espèce. Une espace insécable avant : il ne passe jamais
+                    seul à la ligne. */}
+                {finding.attributes.notes?.trim() && (
+                    <>
+                        {"\u00a0"}
+                        <button type="button" className="champis-expo-note-button" aria-label={label} title={label} onClick={onNote}>
+                            <Icon name="info" />
+                        </button>
+                    </>
                 )}
                 {vernacular && <span className="champis-expo-vernacular">{vernacular}</span>}
             </td>
@@ -387,6 +408,63 @@ function Row({ finding, hasNumbers, hasPhotos, onPhoto }) {
                 </td>
             )}
         </tr>
+    );
+}
+
+// Les remarques d'une espèce, comme le « i » de la page publique de
+// champis.net (/expo/N) : une petite fenêtre titrée de son numéro et de son
+// nom, le texte tel que sa société l'a saisi, retours à la ligne compris
+// (jamais du HTML). C'est un <dialog> du navigateur : le reste de la page est
+// inaccessible tant qu'elle est ouverte, Échap la ferme. Le bouton Fermer ou
+// un clic à côté aussi ; le focus revient au « i ».
+function NoteDialog({ finding, onClose }) {
+    const dialog = useRef(null);
+    // Le clic a commencé sur le fond : sélectionner le texte en relâchant
+    // la souris à côté ne ferme pas la fenêtre.
+    const pressedOutside = useRef(false);
+    const id = useId();
+    const { label, notes, speciesDisplay } = finding.attributes;
+    const name = speciesName(finding);
+    const close = () => dialog.current?.close();
+
+    useEffect(() => {
+        const opener = document.activeElement;
+        dialog.current.showModal();
+        dialog.current.querySelector("button")?.focus();
+
+        return () => opener?.focus?.();
+    }, []);
+
+    return createPortal(
+        <dialog
+            ref={dialog}
+            className="champis-expo-note"
+            aria-labelledby={`${id}-title`}
+            aria-describedby={`${id}-text`}
+            onClose={onClose}
+            // Le contenu est tout entier dans la div : un clic sur le
+            // <dialog> lui-même est un clic sur le fond.
+            onPointerDown={(e) => {
+                pressedOutside.current = e.target === dialog.current;
+            }}
+            onClick={(e) => pressedOutside.current && e.target === dialog.current && close()}
+        >
+            <div className="champis-expo-note-content">
+                <div className="champis-expo-note-top">
+                    <p id={`${id}-title`} className="champis-expo-note-title">
+                        {label && <>{label} · </>}
+                        {speciesDisplay ? <i>{name}</i> : name}
+                    </p>
+                    <button type="button" className="champis-expo-note-close" aria-label="Fermer" onClick={close}>
+                        <Icon name="close" />
+                    </button>
+                </div>
+                <p id={`${id}-text`} className="champis-expo-note-text">
+                    {notes.trim()}
+                </p>
+            </div>
+        </dialog>,
+        document.body,
     );
 }
 

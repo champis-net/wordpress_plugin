@@ -4,7 +4,7 @@ Tags: champignons, mycologie, événements, exposition, société
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 3.2.2
+Stable tag: 3.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,7 @@ Le code court `[champis-expo-N]`, où N est le numéro de l'exposition, affiche 
 
 * les dates de l'exposition, son lieu et son nombre d'espèces ;
 * pour chaque espèce, son nom scientifique (avec un lien vers sa page sur champis.net) et son nom vernaculaire, son numéro si l'exposition numérote ses espèces, et une miniature de ses photos ;
+* les remarques saisies par votre société pour une espèce : une icône « i » à côté de son nom les ouvre dans une petite fenêtre ;
 * une recherche par nom (et par numéro si l'exposition numérote ses espèces), qui ne tient pas compte des accents ;
 * un menu « Trier par » : numéro (par défaut si l'exposition numérote ses espèces), nom scientifique (sinon), nom vernaculaire, derniers ou premiers ajouts ;
 * les 20 premières espèces, puis 20 de plus à chaque clic sur « Afficher plus » ;
@@ -66,6 +67,9 @@ Sur le forum : [Plugin WordPress](https://champis.net/d/1025454-plugin-wordpress
 Conditions d'utilisation et confidentialité : https://champis.net
 
 == Changelog ==
+
+= 3.3.0 =
+* Expositions : les remarques saisies pour une espèce sur champis.net s'affichent, comme sur la page publique de l'exposition. Une icône « i » à côté du nom de l'espèce les ouvre dans une petite fenêtre (aussi au clavier et avec un lecteur d'écran) ; Échap, le bouton Fermer ou un clic à côté la ferment.
 
 = 3.2.2 =
 * Expositions : des boutons « Diaporama » et « Afficher plus » plus discrets, avec un contour fin plutôt que le bouton plein du thème. « Diaporama » rejoint la ligne du résumé, « Afficher plus » est centré sous la liste.

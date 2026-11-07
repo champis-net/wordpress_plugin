@@ -5,7 +5,8 @@
  * fixés ici : tous les thèmes ne s'en chargent pas (Divi laisse au champ de
  * recherche son style de navigateur, 13 px) ou le font mal pour une liste
  * (cadre et 24 px de marges aux cellules de Divi, gros boutons pleins).
- * La visionneuse a son propre style, sombre, par-dessus la page.
+ * La visionneuse a son propre style, sombre, par-dessus la page ; la fenêtre
+ * des remarques aussi, claire.
  */
 
 .champis-expo-root {
@@ -162,6 +163,40 @@
     display: block;
     opacity: 0.8;
     font-size: 0.92em;
+}
+
+/* Le « i » des remarques, une icône dans la ligne du nom plutôt qu'un bouton :
+   la couleur du texte (pas celle des liens, voir .champis-expo-button), un peu
+   atténuée. Sa marge intérieure agrandit la zone à toucher (près de 30 px),
+   ses marges négatives l'empêchent d'agrandir la ligne et le rapprochent de
+   l'espace insécable qui le précède. */
+.champis-expo-root button.champis-expo-note-button {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    vertical-align: -0.5em;
+    padding: 0.3em;
+    margin: -0.3em -0.1em -0.3em -0.15em;
+    border-radius: 50%;
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.champis-expo-root button.champis-expo-note-button:hover,
+.champis-expo-root button.champis-expo-note-button:focus-visible {
+    opacity: 1;
+}
+
+.champis-expo-root button.champis-expo-note-button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 0;
+}
+
+.champis-expo-note-button svg {
+    display: block;
+    width: 1.15em;
+    height: 1.15em;
+    fill: currentColor;
 }
 
 /* La miniature, un bouton qui ouvre la visionneuse : sans le style que le
@@ -363,9 +398,102 @@
     right: 1em;
 }
 
+/* Remarques : une petite fenêtre (<dialog>), hors du widget (ajoutée à
+   <body>) pour échapper aux règles du thème sur le contenu. Le fond et le
+   texte sont fixés : sur un thème sombre, ceux de la page la rendraient
+   illisible. La police reste celle du thème. */
+
+.champis-expo-note {
+    box-sizing: border-box;
+    width: min(30em, calc(100% - 2em));
+    max-width: none;
+    max-height: calc(100% - 2em);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #222;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    font-size: clamp(14px, 1em, 18px);
+    font-weight: normal;
+    line-height: 1.5;
+    text-align: left;
+    animation: champis-expo-fade 0.15s ease-out;
+}
+
+.champis-expo-note::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Tout le contenu, et la marge intérieure : un clic sur le <dialog> lui-même
+   est alors un clic sur le fond (voir NoteDialog). */
+.champis-expo-note-content {
+    padding: 0.9em 1em 1.25em 1.25em;
+}
+
+.champis-expo-note-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5em;
+}
+
+.champis-expo-note p.champis-expo-note-title,
+.champis-expo-note p.champis-expo-note-text {
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    font-size: 1em;
+    line-height: inherit;
+}
+
+.champis-expo-note p.champis-expo-note-title {
+    padding-top: 0.35em;
+    font-weight: bold;
+}
+
+/* Le texte tel qu'il a été saisi, ses retours à la ligne gardés. */
+.champis-expo-note p.champis-expo-note-text {
+    margin-top: 0.6em;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.champis-expo-note button.champis-expo-note-close {
+    all: unset;
+    box-sizing: border-box;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25em;
+    height: 2.25em;
+    margin: -0.1em -0.4em 0 0;
+    border-radius: 50%;
+    color: inherit;
+    cursor: pointer;
+}
+
+.champis-expo-note button.champis-expo-note-close:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.champis-expo-note button.champis-expo-note-close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 0;
+}
+
+.champis-expo-note-close svg {
+    width: 1.4em;
+    height: 1.4em;
+    fill: currentColor;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .champis-expo-skeleton span,
-    .champis-expo-viewer {
+    .champis-expo-viewer,
+    .champis-expo-note {
         animation: none;
     }
 }
