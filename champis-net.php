@@ -11,7 +11,7 @@
  * Plugin Name:       Champis.net
  * Plugin URI:        https://champis.net/d/1025454-plugin-wordpress
  * Description:       Affiche les prochains événements mycologiques et la liste des espèces d'une exposition publiés sur le forum champis.net.
- * Version:           3.3.0
+ * Version:           3.4.0
  * Requires at least: 6.6
  * Requires PHP:      7.2
  * Author:            Félicien Corbat
@@ -34,9 +34,14 @@ GNU General Public License for more details.
 
 // Les scripts React ne sont que déclarés ici (wp_register_script) : chaque
 // filtre the_content ci-dessous ne les met en file (wp_enqueue_script) que
-// s'il trouve son shortcode, pour que les pages sans widget ne les
-// téléchargent pas. Ça marche parce qu'ils sont chargés en pied de page,
-// imprimé après le contenu.
+// s'il trouve son shortcode, et chaque bloc (src/, compilé dans build/)
+// les a comme viewScript, que WordPress met en file quand il affiche le
+// bloc - les pages sans widget ne les téléchargent pas. Ça marche parce
+// qu'ils sont chargés en pied de page, imprimé après le contenu.
+//
+// Déclarés dès init, et pas au crochet wp_enqueue_scripts : un thème à
+// blocs affiche le contenu de la page avant wp_head(), donc avant ce
+// crochet.
 
 // Le forum champis.net (Flarum depuis le 10 octobre 2026), lu directement
 // par le navigateur du visiteur : CORS y est ouvert pour les expositions
@@ -86,7 +91,7 @@ function champis_register_expo_react() {
         'apiBase' => CHAMPIS_FLARUM_API_BASE,
     ]);
 }
-add_action('wp_enqueue_scripts', 'champis_register_expo_react');
+add_action('init', 'champis_register_expo_react');
 
 // --- Prochains événements ---
 //
@@ -120,5 +125,71 @@ function champis_register_events_react() {
         'apiBase' => CHAMPIS_FLARUM_API_BASE,
     ]);
 }
-add_action('wp_enqueue_scripts', 'champis_register_events_react');
+add_action('init', 'champis_register_events_react');
+
+// --- Blocs ---
+//
+// « Exposition champis.net » (src/expo) et « Événements champis.net »
+// (src/evenements), compilés par @wordpress/scripts dans build/ avec
+// build/blocks-manifest.php (npm run build). Enregistrés comme le fait
+// @wordpress/create-block : la fonction de WordPress 6.8 si elle existe,
+// sinon celle de 6.7 suivie de register_block_type(), sinon
+// register_block_type() seul.
+function champis_net_register_blocks() {
+    if (function_exists('wp_register_block_types_from_metadata_collection')) {
+        wp_register_block_types_from_metadata_collection(__DIR__ . '/build', __DIR__ . '/build/blocks-manifest.php');
+        return;
+    }
+
+    if (function_exists('wp_register_block_metadata_collection')) {
+        wp_register_block_metadata_collection(__DIR__ . '/build', __DIR__ . '/build/blocks-manifest.php');
+    }
+
+    $manifest_data = require __DIR__ . '/build/blocks-manifest.php';
+    foreach (array_keys($manifest_data) as $block_type) {
+        register_block_type(__DIR__ . "/build/{$block_type}");
+    }
+}
+add_action('init', 'champis_net_register_blocks');
+
+// L'adresse du site (« https://www.exemple.ch »), telle que champis.net la
+// compare aux « Domaines autorisés (partage externe) » d'une société.
+function champis_net_site_origin() {
+    $parts = wp_parse_url(home_url());
+    if (empty($parts['scheme']) || empty($parts['host'])) {
+        return '';
+    }
+
+    $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+
+    return strtolower($parts['scheme'] . '://' . $parts['host'] . $port);
+}
+
+// Dans l'éditeur, les blocs montrent les vrais widgets en aperçu : ils
+// lisent la même configuration que sur le site, sous le même nom. Le bloc
+// des expositions reçoit aussi l'adresse du site, pour demander à
+// champis.net les expositions autorisées sur ce site.
+function champis_net_configure_block_editor() {
+    $registry = WP_Block_Type_Registry::get_instance();
+    $configs = [
+        'champis-net/expo' => ['champisExpoConfig', [
+            'apiBase' => CHAMPIS_FLARUM_API_BASE,
+            'siteOrigin' => champis_net_site_origin(),
+        ]],
+        'champis-net/evenements' => ['champisEventsConfig', [
+            'apiBase' => CHAMPIS_FLARUM_API_BASE,
+        ]],
+    ];
+
+    foreach ($configs as $block_name => list($object_name, $config)) {
+        $block_type = $registry->get_registered($block_name);
+        if (! $block_type) {
+            continue;
+        }
+        foreach ($block_type->editor_script_handles as $handle) {
+            wp_localize_script($handle, $object_name, $config);
+        }
+    }
+}
+add_action('enqueue_block_editor_assets', 'champis_net_configure_block_editor');
 

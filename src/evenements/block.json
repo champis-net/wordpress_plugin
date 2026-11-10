@@ -1,0 +1,29 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "champis-net/evenements",
+	"version": "3.4.0",
+	"title": "Événements champis.net",
+	"category": "widgets",
+	"icon": "calendar-alt",
+	"description": "Les prochains événements mycologiques annoncés sur champis.net : expositions, sorties, journées d'étude.",
+	"keywords": [ "champignons", "mycologie", "agenda", "champis" ],
+	"attributes": {
+		"limit": {
+			"type": "integer",
+			"default": 10
+		}
+	},
+	"example": {
+		"attributes": {
+			"limit": 3
+		}
+	},
+	"supports": {
+		"html": false
+	},
+	"textdomain": "champis-net",
+	"editorScript": "file:./index.js",
+	"viewScript": "champis-events-flarum",
+	"render": "file:./render.php"
+}

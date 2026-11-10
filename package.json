@@ -1,13 +1,22 @@
 {
   "name": "champis-net",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "private": true,
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs && wp-scripts build --blocks-manifest",
+    "start": "wp-scripts start --blocks-manifest"
   },
   "devDependencies": {
+    "@wordpress/scripts": "^37.1.0",
     "esbuild": "^0.25.9",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
+  },
+  "dependencies": {
+    "@wordpress/block-editor": "^20.0.0",
+    "@wordpress/blocks": "^17.1.0",
+    "@wordpress/components": "^44.0.0",
+    "@wordpress/element": "^10.1.0",
+    "@wordpress/i18n": "^7.1.0"
   }
 }
